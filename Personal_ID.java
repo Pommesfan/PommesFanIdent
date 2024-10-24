@@ -1,4 +1,6 @@
+import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 
 public class Personal_ID {
     public final String ID_number;
@@ -10,13 +12,30 @@ public class Personal_ID {
     public final String address;
 
     public Personal_ID(String pIDnumber, String pName, String pSurname, Date pBirthDate, String pAddress) {
+        Calendar calendar = new GregorianCalendar();
+        calendar.setTime(pBirthDate);
         ID_number = pIDnumber;
         name = pName;
         surname = pSurname;
-        birthdate_day = pBirthDate.getDay();
-        birthdate_month = pBirthDate.getMonth();
-        birthdate_year = pBirthDate.getYear();
+        birthdate_day = calendar.get(Calendar.DAY_OF_MONTH);
+        birthdate_month = calendar.get(Calendar.MONTH) + 1;
+        birthdate_year = calendar.get(Calendar.YEAR);
         address = pAddress;
+    }
+
+    public Personal_ID(byte[] personalIdb) throws Exception {
+        String s = new String(personalIdb);
+        String[] attributes = s.split("\n");
+        if(attributes.length != 7) {
+            throw new Exception("number of attributes not suitable");
+        }
+        ID_number = attributes[0];
+        name = attributes[1];
+        surname = attributes[2];
+        birthdate_day = Integer.parseInt(attributes[3]);
+        birthdate_month = Integer.parseInt(attributes[4]);
+        birthdate_year = Integer.parseInt(attributes[5]);
+        address = attributes[6];
     }
 
     public byte[] toByte() {
@@ -36,5 +55,26 @@ public class Personal_ID {
         sb.append(address);
         sb.append('\n');
         return sb.toString().getBytes();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Ausweisnummer:\n");
+        sb.append(ID_number);
+        sb.append("\nVorname:\n");
+        sb.append(name);
+        sb.append("\nNachname:\n");
+        sb.append(surname);
+        sb.append("\nGeburtsdatum\n");
+        sb.append(birthdate_day);
+        sb.append(".");
+        sb.append(birthdate_month);
+        sb.append(".");
+        sb.append(birthdate_year);
+        sb.append("\nAdresse:\n");
+        sb.append(address);
+        sb.append('\n');
+        return sb.toString();
     }
 }

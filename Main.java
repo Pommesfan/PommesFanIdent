@@ -15,7 +15,7 @@ import java.util.Scanner;
 public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
-    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, ParseException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    public static void main(String[] args) throws Exception {
         System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen");
         int mode = sc.nextInt();
         switch (mode) {
@@ -58,7 +58,7 @@ public class Main {
         String surname = sc.next();
         System.out.println("Geburtsdatum");
         String birthdate = sc.next();
-        Date date = new SimpleDateFormat("dd.mm.yyyy").parse(birthdate);
+        Date date = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate);
         System.out.println("Adresse");
         String address = sc.next();
 
@@ -107,7 +107,7 @@ public class Main {
         return publicSignature.verify(signature_b);
     }
 
-    private static void checkPersonalID() throws IOException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException {
+    private static void checkPersonalID() throws Exception {
         System.out.println("Ausweis auswählen");
         String id_number = sc.next();
 
@@ -120,9 +120,11 @@ public class Main {
         byte[] signature_b = Files.readAllBytes(f.toPath());
 
         if (validateSignature(personal_id_b, signature_b)) {
-           System.out.println("Ausweis ist korrekt");
+           System.out.println("Ausweis ist korrekt\n");
+           Personal_ID personalId = new Personal_ID(personal_id_b);
+           System.out.println(personalId);
         } else {
-            System.out.println("Ausweis ist nicht korrekt");
+            System.out.println("Ausweis ist nicht korrekt\n");
         }
     }
 
