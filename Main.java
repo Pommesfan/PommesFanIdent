@@ -93,6 +93,20 @@ public class Main {
         return signature.sign();
     }
 
+    private static boolean validateSignature(byte[] personal_id_b, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
+        System.out.println("Öffentliches Profil auswählen");
+        //load public key
+        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/public");
+        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+        Signature publicSignature = Signature.getInstance("SHA256withRSA");
+        publicSignature.initVerify(keyFactory.generatePublic(spec));
+        publicSignature.update(personal_id_b);
+        return publicSignature.verify(signature_b);
+    }
+
     private static void checkPersonalID() throws IOException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException {
         System.out.println("Ausweis auswählen");
         String id_number = sc.next();
@@ -105,18 +119,7 @@ public class Main {
         f = new File("PersonalIDs/" + id_number + "/signature");
         byte[] signature_b = Files.readAllBytes(f.toPath());
 
-        System.out.println("Öffentliches Profil auswählen");
-        //load public key
-        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/public");
-        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(privateKeyBytes);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-
-        Signature publicSignature = Signature.getInstance("SHA256withRSA");
-        publicSignature.initVerify(keyFactory.generatePublic(spec));
-        publicSignature.update(personal_id_b);
-        boolean isCorrect = publicSignature.verify(signature_b);
-        if (isCorrect) {
+        if (validateSignature(personal_id_b, signature_b)) {
            System.out.println("Ausweis ist korrekt");
         } else {
             System.out.println("Ausweis ist nicht korrekt");
