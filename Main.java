@@ -1,7 +1,13 @@
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.security.*;
+import java.security.interfaces.RSAPrivateKey;
+import java.security.spec.EncodedKeySpec;
+import java.security.spec.InvalidKeySpecException;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -11,7 +17,7 @@ import java.util.Scanner;
 public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
-    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, ParseException {
+    public static void main(String[] args) throws NoSuchAlgorithmException, IOException, ParseException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen");
         int mode = sc.nextInt();
         switch (mode) {
@@ -44,7 +50,7 @@ public class Main {
         fos.close();
     }
 
-    private static void generateID() throws ParseException {
+    private static void generateID() throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = getAlphanumeric(8);
         System.out.println(ID_number);
         System.out.println("Vorname");
@@ -57,7 +63,37 @@ public class Main {
         System.out.println("Adresse");
         String address = sc.next();
 
+        //Save ID
         Personal_ID personalId = new Personal_ID(ID_number, name, surname, date, address);
+        byte[] personalId_b = personalId.toByte();
+        File f = new File("PersonalIDs/" + ID_number + "/id");
+        f.getParentFile().mkdirs();
+        f.createNewFile();
+        FileOutputStream fos = new FileOutputStream(f);
+        fos.write(personalId_b);
+
+        byte[] signatur_b = sign_id(personalId_b);
+        f = new File("PersonalIDs/" + ID_number + "/signature");
+        fos = new FileOutputStream(f);
+        fos.write(signatur_b);
+    }
+
+    private static byte[] sign_id(byte[] personalIdB) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        System.out.println("Öffentliches Profil auswählen");
+
+        //read out save key
+        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/private");
+        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        //EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(publicKeyBytes);
+        RSAPrivateKey privateKey = (RSAPrivateKey) keyFactory.generatePrivate(spec);
+
+        //sign message
+        Signature signature = Signature.getInstance("SHA256withRSA");
+        signature.initSign(keyFactory.generatePrivate(spec));
+        signature.update(personalIdB);
+        return signature.sign();
     }
 
     private static String getAlphanumeric(int count) {
