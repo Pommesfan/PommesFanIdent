@@ -3,8 +3,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.*;
-import java.security.interfaces.RSAPrivateKey;
-import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
@@ -18,11 +16,12 @@ public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) throws NoSuchAlgorithmException, IOException, ParseException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen");
+        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen");
         int mode = sc.nextInt();
         switch (mode) {
             case 1: generateKeyPair(); break;
-            case 2: generateID();
+            case 2: generateID(); break;
+            case 3: checkPersonalID(); break;
         }
     }
 
@@ -72,6 +71,7 @@ public class Main {
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(personalId_b);
 
+        //Create signature
         byte[] signatur_b = sign_id(personalId_b);
         f = new File("PersonalIDs/" + ID_number + "/signature");
         fos = new FileOutputStream(f);
@@ -86,14 +86,41 @@ public class Main {
         byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
-        //EncodedKeySpec privateKeySpec = new X509EncodedKeySpec(publicKeyBytes);
-        RSAPrivateKey privateKey = (RSAPrivateKey) keyFactory.generatePrivate(spec);
-
         //sign message
         Signature signature = Signature.getInstance("SHA256withRSA");
         signature.initSign(keyFactory.generatePrivate(spec));
         signature.update(personalIdB);
         return signature.sign();
+    }
+
+    private static void checkPersonalID() throws IOException, NoSuchAlgorithmException, SignatureException, InvalidKeySpecException, InvalidKeyException {
+        System.out.println("Ausweis auswählen");
+        String id_number = sc.next();
+
+        //load personal id
+        File f = new File("PersonalIDs/" + id_number + "/id");
+        byte[] personal_id_b = Files.readAllBytes(f.toPath());
+
+        //load signature
+        f = new File("PersonalIDs/" + id_number + "/signature");
+        byte[] signature_b = Files.readAllBytes(f.toPath());
+
+        System.out.println("Öffentliches Profil auswählen");
+        //load public key
+        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/public");
+        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(privateKeyBytes);
+        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+
+        Signature publicSignature = Signature.getInstance("SHA256withRSA");
+        publicSignature.initVerify(keyFactory.generatePublic(spec));
+        publicSignature.update(personal_id_b);
+        boolean isCorrect = publicSignature.verify(signature_b);
+        if (isCorrect) {
+           System.out.println("Ausweis ist korrekt");
+        } else {
+            System.out.println("Ausweis ist nicht korrekt");
+        }
     }
 
     private static String getAlphanumeric(int count) {
