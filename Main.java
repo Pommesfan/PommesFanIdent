@@ -8,6 +8,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Random;
 import java.util.Scanner;
@@ -51,6 +52,11 @@ public class Main {
 
     private static void generateID() throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = getAlphanumeric(8);
+
+        System.out.println("Öffentliches Profil auswählen");
+        String publicProfile = sc.next();
+        File privateKeyFile = new File("MyPublicProfiles/" + publicProfile + "/private");
+
         System.out.println(ID_number);
         System.out.println("Vorname");
         String name = sc.next();
@@ -63,7 +69,7 @@ public class Main {
         String address = sc.next();
 
         //Save ID
-        Personal_ID personalId = new Personal_ID(ID_number, name, surname, date, address);
+        Personal_ID personalId = new Personal_ID(ID_number, publicProfile,  name, surname, date, address);
         byte[] personalId_b = personalId.toByte();
         File f = new File("PersonalIDs/" + ID_number + "/id");
         f.getParentFile().mkdirs();
@@ -72,17 +78,13 @@ public class Main {
         fos.write(personalId_b);
 
         //Create signature
-        byte[] signatur_b = sign_id(personalId_b);
+        byte[] signatur_b = sign_id(personalId_b, privateKeyFile);
         f = new File("PersonalIDs/" + ID_number + "/signature");
         fos = new FileOutputStream(f);
         fos.write(signatur_b);
     }
 
-    private static byte[] sign_id(byte[] personalIdB) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        System.out.println("Öffentliches Profil auswählen");
-
-        //read out save key
-        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/private");
+    private static byte[] sign_id(byte[] personalIdB, File privateKeyFile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -93,12 +95,11 @@ public class Main {
         return signature.sign();
     }
 
-    private static boolean validateSignature(byte[] personal_id_b, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
-        System.out.println("Öffentliches Profil auswählen");
+    private static boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
         //load public key
-        File privateKeyFile = new File("MyPublicProfiles/" + sc.next() + "/public");
-        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(privateKeyBytes);
+        File publicKeyFile = new File("MyPublicProfiles/" + publicProfile + "/public");
+        byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
         Signature publicSignature = Signature.getInstance("SHA256withRSA");
@@ -119,9 +120,10 @@ public class Main {
         f = new File("PersonalIDs/" + id_number + "/signature");
         byte[] signature_b = Files.readAllBytes(f.toPath());
 
-        if (validateSignature(personal_id_b, signature_b)) {
+        String[] personal_id_s = new String(personal_id_b).split("\n");
+        if (validateSignature(personal_id_b, personal_id_s[1], signature_b)) {
            System.out.println("Ausweis ist korrekt\n");
-           Personal_ID personalId = new Personal_ID(personal_id_b);
+           Personal_ID personalId = new Personal_ID(personal_id_s);
            System.out.println(personalId);
         } else {
             System.out.println("Ausweis ist nicht korrekt\n");
