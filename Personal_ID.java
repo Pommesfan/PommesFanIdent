@@ -1,3 +1,5 @@
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -42,29 +44,29 @@ public class Personal_ID {
         personalImagePath = attributes[8];
     }
 
-    public byte[] toByte(boolean withPaths) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(ID_number);
-        sb.append('\n');
-        sb.append(publicProfile);
-        sb.append('\n');
-        sb.append(name);
-        sb.append('\n');
-        sb.append(surname);
-        sb.append('\n');
-        sb.append(birthdate_day);
-        sb.append('\n');
-        sb.append(birthdate_month);
-        sb.append('\n');
-        sb.append(birthdate_year);
-        sb.append('\n');
-        sb.append(address);
-        sb.append('\n');
+    public byte[] toByte(boolean withPaths) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        baos.write(ID_number.getBytes());
+        baos.write('\n');
+        baos.write(publicProfile.getBytes());
+        baos.write('\n');
+        baos.write(name.getBytes());
+        baos.write('\n');
+        baos.write(surname.getBytes());
+        baos.write('\n');
+        baos.write(Integer.toString(birthdate_day).getBytes());
+        baos.write('\n');
+        baos.write(Integer.toString(birthdate_month).getBytes());
+        baos.write('\n');
+        baos.write(Integer.toString(birthdate_year).getBytes());
+        baos.write('\n');
+        baos.write(address.getBytes());
+        baos.write('\n');
         if(withPaths) {
-            sb.append(personalImagePath);
-            sb.append('\n');
+            baos.write(personalImagePath.getBytes());
+            baos.write('\n');
         }
-        return sb.toString().getBytes();
+        return baos.toByteArray();
     }
 
     @Override
@@ -86,6 +88,8 @@ public class Personal_ID {
         sb.append(birthdate_year);
         sb.append("\nAdresse:\n");
         sb.append(address);
+        sb.append("\nPfad Passbild:\n");
+        sb.append(personalImagePath);
         sb.append('\n');
         return sb.toString();
     }

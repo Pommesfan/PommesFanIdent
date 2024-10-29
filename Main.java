@@ -37,16 +37,12 @@ public class Main {
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
 
-        File f = new File("MyPublicProfiles/" + profileName + "/private");
-        f.getParentFile().mkdirs();
-        f.createNewFile();
+        File f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/private");
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(privateKey.getEncoded());
         fos.close();
 
-        f = new File("MyPublicProfiles/" + profileName + "/public");
-        f.getParentFile().mkdirs();
-        f.createNewFile();
+        f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/public");
         fos = new FileOutputStream(f);
         fos.write(publicKey.getEncoded());
         fos.close();
@@ -93,9 +89,7 @@ public class Main {
         byte[] signatur_b = sign_id(personalId_with_personal_image_b, privateKeyFile);
 
         //Save ID
-        File f = new File("PersonalIDs/" + ID_number + "/id");
-        f.getParentFile().mkdirs();
-        f.createNewFile();
+        File f =createFileAndSubfolder("PersonalIDs/" + ID_number + "/id");
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(personalId_b);
 
@@ -130,7 +124,7 @@ public class Main {
 
     private static void checkPersonalID() throws Exception {
         System.out.println("Ausweis auswählen");
-        String id_number = sc.next();
+        String id_number = sc.next().toUpperCase();
 
         //load personal id
         File f = new File("PersonalIDs/" + id_number + "/id");
@@ -174,5 +168,12 @@ public class Main {
         baos.write(personalIdB);
         baos.write(personalImage);
         return baos.toByteArray();
+    }
+
+    private static File createFileAndSubfolder(String path) throws IOException {
+        File f = new File(path);
+        f.getParentFile().mkdirs();
+        f.createNewFile();
+        return f;
     }
 }
