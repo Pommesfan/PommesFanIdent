@@ -1,14 +1,16 @@
+import javax.swing.*;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
 import java.util.Date;
 import java.util.Random;
 import java.util.Scanner;
@@ -68,17 +70,35 @@ public class Main {
         System.out.println("Adresse");
         String address = sc.next();
 
+        // get personalPicture
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File personalPicture = fileChooser.getSelectedFile();
+        if(personalPicture == null) {
+            return;
+        }
+
+        String personalPictureFileName = personalPicture.getName();
+        String internalPath = "PersonalImages/" + personalPictureFileName;
+        File imageDir = new File("PersonalImages/");
+        imageDir.mkdirs();
+        Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath));
+
+        Personal_ID personalId = new Personal_ID(ID_number, publicProfile,  name, surname, date, address, personalPictureFileName);
+        byte[] personalId_b = personalId.toByte(true);
+
+        //Create signature
+        byte[] personalId_with_personal_image_b = concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
+        //ask for public profile before, when quitting don't save anything
+        byte[] signatur_b = sign_id(personalId_with_personal_image_b, privateKeyFile);
+
         //Save ID
-        Personal_ID personalId = new Personal_ID(ID_number, publicProfile,  name, surname, date, address);
-        byte[] personalId_b = personalId.toByte();
         File f = new File("PersonalIDs/" + ID_number + "/id");
         f.getParentFile().mkdirs();
         f.createNewFile();
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(personalId_b);
 
-        //Create signature
-        byte[] signatur_b = sign_id(personalId_b, privateKeyFile);
         f = new File("PersonalIDs/" + ID_number + "/signature");
         fos = new FileOutputStream(f);
         fos.write(signatur_b);
@@ -119,11 +139,14 @@ public class Main {
         //load signature
         f = new File("PersonalIDs/" + id_number + "/signature");
         byte[] signature_b = Files.readAllBytes(f.toPath());
-
         String[] personal_id_s = new String(personal_id_b).split("\n");
-        if (validateSignature(personal_id_b, personal_id_s[1], signature_b)) {
+
+        Personal_ID personalId = new Personal_ID(personal_id_s);
+        String personalImage = "PersonalImages/" + personalId.personalImagePath;
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
+
+        if (validateSignature(concat_bytes(personal_id_b, personalImage_b), personal_id_s[1], signature_b)) {
            System.out.println("Ausweis ist korrekt\n");
-           Personal_ID personalId = new Personal_ID(personal_id_s);
            System.out.println(personalId);
         } else {
             System.out.println("Ausweis ist nicht korrekt\n");
@@ -144,5 +167,12 @@ public class Main {
             stringBuilder.append(c);
         }
         return stringBuilder.toString();
+    }
+
+    private static byte[] concat_bytes(byte[] personalIdB, byte[] personalImage) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream(personalIdB.length + personalImage.length);
+        baos.write(personalIdB);
+        baos.write(personalImage);
+        return baos.toByteArray();
     }
 }

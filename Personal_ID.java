@@ -11,8 +11,9 @@ public class Personal_ID {
     public final int birthdate_month;
     public final int birthdate_year;
     public final String address;
+    public final String personalImagePath;
 
-    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate, String pAddress) {
+    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate, String pAddress, String pPersonalImagePath) {
         Calendar calendar = new GregorianCalendar();
         calendar.setTime(pBirthDate);
         ID_number = pIDnumber;
@@ -23,10 +24,11 @@ public class Personal_ID {
         birthdate_month = calendar.get(Calendar.MONTH) + 1;
         birthdate_year = calendar.get(Calendar.YEAR);
         address = pAddress;
+        personalImagePath = pPersonalImagePath;
     }
 
     public Personal_ID(String[] attributes) throws Exception {
-        if(attributes.length != 8) {
+        if(attributes.length != 9) {
             throw new Exception("number of attributes not suitable");
         }
         ID_number = attributes[0];
@@ -37,9 +39,10 @@ public class Personal_ID {
         birthdate_month = Integer.parseInt(attributes[5]);
         birthdate_year = Integer.parseInt(attributes[6]);
         address = attributes[7];
+        personalImagePath = attributes[8];
     }
 
-    public byte[] toByte() {
+    public byte[] toByte(boolean withPaths) {
         StringBuilder sb = new StringBuilder();
         sb.append(ID_number);
         sb.append('\n');
@@ -57,6 +60,10 @@ public class Personal_ID {
         sb.append('\n');
         sb.append(address);
         sb.append('\n');
+        if(withPaths) {
+            sb.append(personalImagePath);
+            sb.append('\n');
+        }
         return sb.toString().getBytes();
     }
 
