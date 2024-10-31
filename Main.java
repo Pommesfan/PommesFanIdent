@@ -1,8 +1,5 @@
 import javax.swing.*;
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
@@ -19,12 +16,14 @@ public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen");
+        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil importieren\n5: Ausweis importieren");
         int mode = sc.nextInt();
         switch (mode) {
             case 1: generateKeyPair(); break;
             case 2: generateID(); break;
             case 3: checkPersonalID(); break;
+            case 4: importPublicProfile(); break;
+            case 5: importPersonalID(); break;
         }
     }
 
@@ -42,7 +41,7 @@ public class Main {
         fos.write(privateKey.getEncoded());
         fos.close();
 
-        f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/public");
+        f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/Hallo");
         fos = new FileOutputStream(f);
         fos.write(publicKey.getEncoded());
         fos.close();
@@ -85,15 +84,17 @@ public class Main {
 
         //Create signature
         byte[] personalId_with_personal_image_b = concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
-        //ask for public profile before, when quitting don't save anything
+        //ask for Hallo profile before, when quitting don't save anything
         byte[] signatur_b = sign_id(personalId_with_personal_image_b, privateKeyFile);
 
+        String distPath = "CreatedPersonalIDs/" + ID_number;
+
         //Save ID
-        File f =createFileAndSubfolder("PersonalIDs/" + ID_number + "/id");
+        File f = createFileAndSubfolder( distPath + "/id");
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(personalId_b);
 
-        f = new File("PersonalIDs/" + ID_number + "/signature");
+        f = new File(distPath + "/signature");
         fos = new FileOutputStream(f);
         fos.write(signatur_b);
     }
@@ -110,7 +111,6 @@ public class Main {
     }
 
     private static boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
-        //load public key
         File publicKeyFile = new File("MyPublicProfiles/" + publicProfile + "/public");
         byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
@@ -126,12 +126,14 @@ public class Main {
         System.out.println("Ausweis auswählen");
         String id_number = sc.next().toUpperCase();
 
+        String distPath = "CreatedPersonalIDs/" + id_number;
+
         //load personal id
-        File f = new File("PersonalIDs/" + id_number + "/id");
+        File f = new File(distPath + "/id");
         byte[] personal_id_b = Files.readAllBytes(f.toPath());
 
         //load signature
-        f = new File("PersonalIDs/" + id_number + "/signature");
+        f = new File(distPath + "/signature");
         byte[] signature_b = Files.readAllBytes(f.toPath());
         String[] personal_id_s = new String(personal_id_b).split("\n");
 
@@ -145,6 +147,25 @@ public class Main {
         } else {
             System.out.println("Ausweis ist nicht korrekt\n");
         }
+    }
+
+    private static void importPublicProfile() throws IOException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File publicProfile = fileChooser.getSelectedFile();
+        if(publicProfile == null) {
+            return;
+        }
+
+        String profileFileName = publicProfile.getName();
+        String internalPath = "ImportedPublicProfiles/" + profileFileName;
+        File distDir = new File("ImportedPublicProfiles/");
+        distDir.mkdirs();
+        Files.copy(Paths.get(publicProfile.toURI()), Paths.get(internalPath));
+    }
+
+    private static void importPersonalID() {
+
     }
 
     private static String getAlphanumeric(int count) {
