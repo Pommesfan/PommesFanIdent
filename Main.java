@@ -1,5 +1,7 @@
 import javax.swing.*;
 import java.io.*;
+import java.lang.reflect.Array;
+import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
@@ -166,14 +168,54 @@ public class Main {
         Files.copy(Paths.get(publicProfile.toURI()), Paths.get(internalPath));
     }
 
-    private static void importPersonalID() {
-
+    private static void importPersonalID() throws IOException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File source = fileChooser.getSelectedFile();
+        if(source == null) {
+            return;
+        }
+        FileInputStream fis = new FileInputStream(source);
+        byte[] len_personal_id_b = new byte[4];
+        fis.read(len_personal_id_b, 0, 4);
+        System.out.println();
     }
 
-    private static void exportPersonalID() {
+    private static void exportPersonalID() throws IOException {
         System.out.println("Ausweisnummer angeben");
-        String personal_id = sc.next();
+        String personal_id = sc.next().toUpperCase();
 
+        String distPath = "CreatedPersonalIDs/" + personal_id;
+
+        //load personal id
+        File f = new File(distPath + "/id");
+        byte[] personal_id_b = Files.readAllBytes(f.toPath());
+
+        //load signature
+        f = new File(distPath + "/signature");
+        byte[] signature_b = Files.readAllBytes(f.toPath());
+
+        // load personal image
+        String[] personal_id_s = new String(personal_id_b).split("\n");
+        f = new File("PersonalImages/" + personal_id_s[8]);
+        byte[] personalImage_b = Files.readAllBytes(f.toPath());
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(personal_id));
+        fileChooser.showSaveDialog(null);
+        File destination = fileChooser.getSelectedFile();
+        if(destination == null) {
+            return;
+        }
+
+        FileOutputStream fos = new FileOutputStream(destination);
+        fos.write(int_to_bytes(personal_id_b.length));
+        fos.write(personal_id_b);
+        fos.write(int_to_bytes(signature_b.length));
+        fos.write(signature_b);
+        fos.write(int_to_bytes(personalImage_b.length));
+        fos.write(personalImage_b);
+        fos.close();
     }
 
     private static void exportPublicProfile() throws IOException {
@@ -212,6 +254,14 @@ public class Main {
         baos.write(personalIdB);
         baos.write(personalImage);
         return baos.toByteArray();
+    }
+
+    private static byte[] int_to_bytes(int i) {
+        return ByteBuffer.allocate(4).putInt(93).array();
+    }
+
+    private static int bytes_to_int(byte[] b) {
+        return ByteBuffer.allocate(4).put(b).asIntBuffer().get();
     }
 
     private static File createFileAndSubfolder(String path) throws IOException {
