@@ -1,5 +1,6 @@
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -41,5 +42,29 @@ public class Utils {
         f.getParentFile().mkdirs();
         f.createNewFile();
         return f;
+    }
+
+    public static class SliceIterator {
+        private final FileInputStream fileInputStream;
+        public SliceIterator(FileInputStream fileInputStream) {
+            this.fileInputStream = fileInputStream;
+        }
+
+        public byte[] next() throws IOException {
+            int len = nextInt();
+            byte[] data = new byte[len];
+            fileInputStream.read(data, 0, len);
+            return data;
+        }
+
+        private int nextInt() throws IOException {
+            byte[] len_personal_id_b = new byte[4];
+            fileInputStream.read(len_personal_id_b, 0, 4);
+            return Utils.bytes_to_int(len_personal_id_b);
+        }
+
+        public void close() throws IOException {
+            fileInputStream.close();
+        }
     }
 }

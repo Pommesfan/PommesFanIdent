@@ -173,31 +173,15 @@ public class Main {
             return;
         }
         FileInputStream fis = new FileInputStream(source);
+        Utils.SliceIterator sliceIterator = new Utils.SliceIterator(fis);
 
-        // read len for personal id
-        byte[] len_personal_id_b = new byte[4];
-        fis.read(len_personal_id_b, 0, 4);
-        int len_personal_id = Utils.bytes_to_int(len_personal_id_b);
         // read personal id
-        byte[] personal_id_b = new byte[len_personal_id];
-        fis.read(personal_id_b, 0, len_personal_id);
-
-        // read len for signature
-        byte[] len_signature_b = new byte[4];
-        fis.read(len_signature_b, 0, 4);
-        int len_signature = Utils.bytes_to_int(len_signature_b);
+        byte[] personal_id_b = sliceIterator.next();
         // read signature
-        byte[] signature_b = new byte[len_signature];
-        fis.read(signature_b, 0, len_signature);
-
-        // read len for personal image
-        byte[] len_personal_image_b = new byte[4];
-        fis.read(len_personal_image_b, 0, 4);
-        int len_personal_image = Utils.bytes_to_int(len_personal_image_b);
+        byte[] signature_b = sliceIterator.next();
         // read personal image
-        byte[] personal_image_b = new byte[len_personal_image];
-        fis.read(personal_image_b, 0, len_personal_image);
-        fis.close();
+        byte[] personal_image_b = sliceIterator.next();
+        sliceIterator.close();
 
         // extract id number and image name
         String[] personal_id_s = new String(personal_id_b).split("\n");
