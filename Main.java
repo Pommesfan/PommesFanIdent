@@ -1,6 +1,5 @@
 import javax.swing.*;
 import java.io.*;
-import java.lang.reflect.Array;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -45,7 +44,7 @@ public class Main {
         fos.write(privateKey.getEncoded());
         fos.close();
 
-        f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/Hallo");
+        f = createFileAndSubfolder("MyPublicProfiles/" + profileName + "/Hallo.jpg");
         fos = new FileOutputStream(f);
         fos.write(publicKey.getEncoded());
         fos.close();
@@ -88,7 +87,7 @@ public class Main {
 
         //Create signature
         byte[] personalId_with_personal_image_b = concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
-        //ask for Hallo profile before, when quitting don't save anything
+        //ask for Hallo.jpg profile before, when quitting don't save anything
         byte[] signatur_b = sign_id(personalId_with_personal_image_b, privateKeyFile);
 
         String distPath = "CreatedPersonalIDs/" + ID_number;
@@ -115,7 +114,7 @@ public class Main {
     }
 
     private static boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
-        File publicKeyFile = new File("MyPublicProfiles/" + publicProfile + "/public");
+        File publicKeyFile = new File("ImportedPublicProfiles/" + publicProfile);
         byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
@@ -130,7 +129,7 @@ public class Main {
         System.out.println("Ausweis auswählen");
         String id_number = sc.next().toUpperCase();
 
-        String distPath = "CreatedPersonalIDs/" + id_number;
+        String distPath = "ImportedPersonalIDs/" + id_number;
 
         //load personal id
         File f = new File(distPath + "/id");
@@ -176,8 +175,55 @@ public class Main {
             return;
         }
         FileInputStream fis = new FileInputStream(source);
+
+        // read len for personal id
         byte[] len_personal_id_b = new byte[4];
         fis.read(len_personal_id_b, 0, 4);
+        int len_personal_id = bytes_to_int(len_personal_id_b);
+        // read personal id
+        byte[] personal_id_b = new byte[len_personal_id];
+        fis.read(personal_id_b, 0, len_personal_id);
+
+        // read len for signature
+        byte[] len_signature_b = new byte[4];
+        fis.read(len_signature_b, 0, 4);
+        int len_signature = bytes_to_int(len_signature_b);
+        // read signature
+        byte[] signature_b = new byte[len_signature];
+        fis.read(signature_b, 0, len_signature);
+
+        // read len for personal image
+        byte[] len_personal_image_b = new byte[4];
+        fis.read(len_personal_image_b, 0, 4);
+        int len_personal_image = bytes_to_int(len_personal_image_b);
+        // read personal image
+        byte[] personal_image_b = new byte[len_personal_image];
+        fis.read(personal_image_b, 0, len_personal_image);
+        fis.close();
+
+        // extract id number and image name
+        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String id_number = personal_id_s[0];
+        String imageName = personal_id_s[8];
+
+        // save imported data
+        String id_path = "ImportedPersonalIDs/" + id_number;
+
+        File f_personal_id = createFileAndSubfolder(id_path + "/id");
+        FileOutputStream fos = new FileOutputStream(f_personal_id);
+        fos.write(personal_id_b);
+        fos.close();
+
+        File f_signature = createFileAndSubfolder(id_path + "/signature");
+        fos = new FileOutputStream(f_signature);
+        fos.write(signature_b);
+        fos.close();
+
+        File f_personal_image = createFileAndSubfolder("PersonalImages/" + imageName);
+        fos = new FileOutputStream(f_personal_image);
+        fos.write(personal_image_b);
+        fos.close();
+
         System.out.println();
     }
 
@@ -232,7 +278,6 @@ public class Main {
         }
         Files.copy(publicProfile.toPath(), destination.toPath());
     }
-
     private static String getAlphanumeric(int count) {
         Random r = new Random();
         StringBuilder stringBuilder = new StringBuilder();
@@ -257,11 +302,11 @@ public class Main {
     }
 
     private static byte[] int_to_bytes(int i) {
-        return ByteBuffer.allocate(4).putInt(93).array();
+        return ByteBuffer.allocate(4).putInt(i).array();
     }
 
     private static int bytes_to_int(byte[] b) {
-        return ByteBuffer.allocate(4).put(b).asIntBuffer().get();
+        return ByteBuffer.wrap(b).getInt();
     }
 
     private static File createFileAndSubfolder(String path) throws IOException {
