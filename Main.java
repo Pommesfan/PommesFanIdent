@@ -16,7 +16,7 @@ public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil importieren\n5: Ausweis importieren");
+        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil importieren\n5: Ausweis importieren\n6: Öffentliches Profil exportieren\n7: Ausweis exportieren");
         int mode = sc.nextInt();
         switch (mode) {
             case 1: generateKeyPair(); break;
@@ -24,6 +24,8 @@ public class Main {
             case 3: checkPersonalID(); break;
             case 4: importPublicProfile(); break;
             case 5: importPersonalID(); break;
+            case 6: exportPublicProfile(); break;
+            case 7: exportPersonalID(); break;
         }
     }
 
@@ -166,6 +168,27 @@ public class Main {
 
     private static void importPersonalID() {
 
+    }
+
+    private static void exportPersonalID() {
+        System.out.println("Ausweisnummer angeben");
+        String personal_id = sc.next();
+
+    }
+
+    private static void exportPublicProfile() throws IOException {
+        System.out.println("Profilname angeben");
+        String profileName = sc.next();
+
+        File publicProfile = new File("MyPublicProfiles/" + profileName + "/public");
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(profileName));
+        fileChooser.showSaveDialog(null);
+        File destination = fileChooser.getSelectedFile();
+        if(destination == null) {
+            return;
+        }
+        Files.copy(publicProfile.toPath(), destination.toPath());
     }
 
     private static String getAlphanumeric(int count) {
