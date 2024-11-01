@@ -42,7 +42,7 @@ public class Main {
         fos.write(privateKey.getEncoded());
         fos.close();
 
-        f = Utils.createFileAndSubfolder("MyPublicProfiles/" + profileName + "/Hallo.jpg");
+        f = Utils.createFileAndSubfolder("MyPublicProfiles/" + profileName + "/public");
         fos = new FileOutputStream(f);
         fos.write(publicKey.getEncoded());
         fos.close();
@@ -165,7 +165,7 @@ public class Main {
         Files.copy(Paths.get(publicProfile.toURI()), Paths.get(internalPath));
     }
 
-    private static void importPersonalID() throws IOException {
+    private static void importPersonalID() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.showOpenDialog(null);
         File source = fileChooser.getSelectedFile();
@@ -186,7 +186,13 @@ public class Main {
         // extract id number and image name
         String[] personal_id_s = new String(personal_id_b).split("\n");
         String id_number = personal_id_s[0];
+        String publicProfile = personal_id_s[1];
         String imageName = personal_id_s[8];
+
+        if(!validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b), publicProfile, signature_b)) {
+            System.err.println("Ausweis ungültig");
+            return;
+        }
 
         // save imported data
         String id_path = "ImportedPersonalIDs/" + id_number;
