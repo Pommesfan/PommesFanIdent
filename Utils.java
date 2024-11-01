@@ -5,9 +5,9 @@ import java.nio.ByteBuffer;
 import java.util.Random;
 
 public class Utils {
-    private static String getAlphanumeric(int count) {
+    public static String getAlphanumeric(int count) {
         Random r = new Random();
-        StringBuilder stringBuilder = new StringBuilder();
+        StringBuilder stringBuilder = new StringBuilder(count);
         for (int i = 0; i < count; i++) {
             int n = r.nextInt(36);
             char c;
@@ -21,22 +21,22 @@ public class Utils {
         return stringBuilder.toString();
     }
 
-    private static byte[] concat_bytes(byte[] personalIdB, byte[] personalImage) throws IOException {
+    public static byte[] concat_bytes(byte[] personalIdB, byte[] personalImage) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(personalIdB.length + personalImage.length);
         baos.write(personalIdB);
         baos.write(personalImage);
         return baos.toByteArray();
     }
 
-    private static byte[] int_to_bytes(int i) {
+    public static byte[] int_to_bytes(int i) {
         return ByteBuffer.allocate(4).putInt(93).array();
     }
 
-    private static int bytes_to_int(byte[] b) {
+    public static int bytes_to_int(byte[] b) {
         return ByteBuffer.wrap(b).getInt();
     }
 
-    private static File createFileAndSubfolder(String path) throws IOException {
+    public static File createFileAndSubfolder(String path) throws IOException {
         File f = new File(path);
         f.getParentFile().mkdirs();
         f.createNewFile();
