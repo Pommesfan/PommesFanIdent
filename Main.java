@@ -12,6 +12,7 @@ import java.util.Date;
 import java.util.Scanner;
 
 public class Main {
+    public static String appDataLocation = "data/";
     public static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) throws Exception {
@@ -82,12 +83,28 @@ public class Main {
 
     private static void doExportPublicProfile() throws IOException {
         System.out.println("Profilname angeben");
-        exportPublicProfile(sc.next());
+        String profileName = sc.next();
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(profileName));
+        fileChooser.showSaveDialog(null);
+        File destination = fileChooser.getSelectedFile();
+        if(destination == null) {
+            return;
+        }
+        exportPublicProfile(profileName, destination);
     }
 
     private static void doExportPersonalID() throws IOException {
         System.out.println("Ausweisnummer angeben");
-        exportPersonalID(sc.next());
+        String id_number = sc.next();
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(id_number));
+        fileChooser.showSaveDialog(null);
+        File destination = fileChooser.getSelectedFile();
+        if(destination == null) {
+            return;
+        }
+        exportPersonalID(id_number, destination);
     }
 
     public static void generateKeyPair(String profileName) throws NoSuchAlgorithmException, IOException {
@@ -97,25 +114,22 @@ public class Main {
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
 
-        File f = Utils.createFileAndSubfolder("MyPublicProfiles/" + profileName + "/private");
+        File f = Utils.createFileAndSubfolder(appDataLocation + "MyPublicProfiles/" + profileName);
         FileOutputStream fos = new FileOutputStream(f);
-        fos.write(privateKey.getEncoded());
-        fos.close();
-
-        f = Utils.createFileAndSubfolder("MyPublicProfiles/" + profileName + "/public");
-        fos = new FileOutputStream(f);
-        fos.write(publicKey.getEncoded());
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        sliceWriter.write(privateKey.getEncoded());
+        sliceWriter.write(publicKey.getEncoded());
         fos.close();
     }
 
     private static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = Utils.getAlphanumeric(8);
         System.out.println(ID_number);
-        File privateKeyFile = new File("MyPublicProfiles/" + publicProfile + "/private");
+        File publicProfileFile = new File(appDataLocation + "MyPublicProfiles/" + publicProfile);
 
         String personalPictureFileName = personalPicture.getName();
-        String internalPath = "PersonalImages/" + personalPictureFileName;
-        File imageDir = new File("PersonalImages/");
+        String internalPath = appDataLocation + "PersonalImages/" + personalPictureFileName;
+        File imageDir = new File(appDataLocation + "PersonalImages/");
         imageDir.mkdirs();
         Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath));
 
@@ -124,23 +138,23 @@ public class Main {
 
         //Create signature
         byte[] personalId_with_personal_image_b = Utils.concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
-        //ask for Hallo.jpg profile before, when quitting don't save anything
-        byte[] signatur_b = sign_id(personalId_with_personal_image_b, privateKeyFile);
+        byte[] signature_b = sign_id(personalId_with_personal_image_b, publicProfileFile);
 
-        String distPath = "CreatedPersonalIDs/" + ID_number;
+        String distPath = appDataLocation + "CreatedPersonalIDs/" + ID_number;
 
         //Save ID
-        File f = Utils.createFileAndSubfolder( distPath + "/id");
+        File f = Utils.createFileAndSubfolder( distPath);
         FileOutputStream fos = new FileOutputStream(f);
-        fos.write(personalId_b);
-
-        f = new File(distPath + "/signature");
-        fos = new FileOutputStream(f);
-        fos.write(signatur_b);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        sliceWriter.write(personalId_b);
+        sliceWriter.write(signature_b);
+        fos.close();
     }
 
-    private static byte[] sign_id(byte[] personalIdB, File privateKeyFile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        byte[] privateKeyBytes = Files.readAllBytes(privateKeyFile.toPath());
+    private static byte[] sign_id(byte[] personalIdB, File publicProfileFile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        FileInputStream fis = new FileInputStream(publicProfileFile);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        byte[] privateKeyBytes = sliceReader.next();
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         //sign message
@@ -151,9 +165,9 @@ public class Main {
     }
 
     private static boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
-        File publicKeyFile = new File("ImportedPublicProfiles/" + publicProfile);
-        byte[] publicKeyBytes = Files.readAllBytes(publicKeyFile.toPath());
-        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKeyBytes);
+        File publicKeyFile = new File(appDataLocation + "ImportedPublicProfiles/" + publicProfile);
+        byte[] publicKey = Files.readAllBytes(publicKeyFile.toPath());
+        X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKey);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
 
         Signature publicSignature = Signature.getInstance("SHA256withRSA");
@@ -163,19 +177,20 @@ public class Main {
     }
 
     private static void checkPersonalID(String id_number) throws Exception {
-        String distPath = "ImportedPersonalIDs/" + id_number;
+        String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number;
 
         //load personal id
-        File f = new File(distPath + "/id");
-        byte[] personal_id_b = Files.readAllBytes(f.toPath());
+        File f = new File(distPath);
+        FileInputStream fis = new FileInputStream(f);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        byte[] personal_id_b = sliceReader.next();
+        byte[] signature_b = sliceReader.next();
+        fis.close();
 
-        //load signature
-        f = new File(distPath + "/signature");
-        byte[] signature_b = Files.readAllBytes(f.toPath());
         String[] personal_id_s = new String(personal_id_b).split("\n");
 
         Personal_ID personalId = new Personal_ID(personal_id_s);
-        String personalImage = "PersonalImages/" + personalId.personalImagePath;
+        String personalImage = appDataLocation + "PersonalImages/" + personalId.personalImagePath;
         byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
 
         if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b), personal_id_s[1], signature_b)) {
@@ -187,23 +202,30 @@ public class Main {
     }
 
     private static void importPublicProfile(File publicProfile) throws IOException {
-        String profileFileName = publicProfile.getName();
-        String internalPath = "ImportedPublicProfiles/" + profileFileName;
-        File distDir = new File("ImportedPublicProfiles/");
-        distDir.mkdirs();
-        Files.copy(Paths.get(publicProfile.toURI()), Paths.get(internalPath));
+        FileInputStream fis = new FileInputStream(publicProfile);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        String public_profile_name = new String(sliceReader.next());
+        byte public_profile_b[] = sliceReader.next();
+        fis.close();
+
+        String internalPath = appDataLocation + "ImportedPublicProfiles/" + public_profile_name;
+        File destination = Utils.createFileAndSubfolder(internalPath);
+
+        FileOutputStream fos = new FileOutputStream(destination);
+        fos.write(public_profile_b);
+        fos.close();
     }
 
     private static void importPersonalID(File source) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         FileInputStream fis = new FileInputStream(source);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
-
         // read personal id
         byte[] personal_id_b = sliceReader.next();
         // read signature
         byte[] signature_b = sliceReader.next();
         // read personal image
         byte[] personal_image_b = sliceReader.next();
+        fis.close();
 
         // extract id number and image name
         String[] personal_id_s = new String(personal_id_b).split("\n");
@@ -217,66 +239,56 @@ public class Main {
         }
 
         // save imported data
-        String id_path = "ImportedPersonalIDs/" + id_number;
+        String id_path = appDataLocation +  "ImportedPersonalIDs/" + id_number;
+        File f_personal_id = Utils.createFileAndSubfolder(id_path);
+        FileOutputStream fos1 = new FileOutputStream(f_personal_id);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos1.write(data));
+        sliceWriter.write(personal_id_b);
+        sliceWriter.write(signature_b);
+        fos1.close();
 
-        File f_personal_id = Utils.createFileAndSubfolder(id_path + "/id");
-        FileOutputStream fos = new FileOutputStream(f_personal_id);
-        fos.write(personal_id_b);
-        fos.close();
 
-        File f_signature = Utils.createFileAndSubfolder(id_path + "/signature");
-        fos = new FileOutputStream(f_signature);
-        fos.write(signature_b);
-        fos.close();
-
-        File f_personal_image = Utils.createFileAndSubfolder("PersonalImages/" + imageName);
-        fos = new FileOutputStream(f_personal_image);
-        fos.write(personal_image_b);
-        fos.close();
+        File f_personal_image = Utils.createFileAndSubfolder(appDataLocation + "PersonalImages/" + imageName);
+        FileOutputStream fos2 = new FileOutputStream(f_personal_image);
+        fos2.write(personal_image_b);
+        fos2.close();
 
         System.out.println();
     }
 
-    private static void exportPersonalID(String personal_id) throws IOException {
-        String distPath = "CreatedPersonalIDs/" + personal_id;
+    private static void exportPersonalID(String personal_id, File destination) throws IOException {
+        String distPath = appDataLocation + "CreatedPersonalIDs/" + personal_id;
 
         //load personal id
-        File f = new File(distPath + "/id");
-        byte[] personal_id_b = Files.readAllBytes(f.toPath());
-
-        //load signature
-        f = new File(distPath + "/signature");
-        byte[] signature_b = Files.readAllBytes(f.toPath());
+        File f = new File(distPath);
+        FileInputStream fis = new FileInputStream(f);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        byte[] personal_id_b = sliceReader.next();
+        byte[] signature_b = sliceReader.next();
+        fis.close();
 
         // load personal image
         String[] personal_id_s = new String(personal_id_b).split("\n");
-        f = new File("PersonalImages/" + personal_id_s[8]);
+        f = new File(appDataLocation + "PersonalImages/" + personal_id_s[8]);
         byte[] personalImage_b = Files.readAllBytes(f.toPath());
-
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File(personal_id));
-        fileChooser.showSaveDialog(null);
-        File destination = fileChooser.getSelectedFile();
-        if(destination == null) {
-            return;
-        }
 
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
         sliceWriter.write(personal_id_b);
         sliceWriter.write(signature_b);
         sliceWriter.write(personalImage_b);
+        fos.close();
     }
 
-    private static void exportPublicProfile(String profileName) throws IOException {
-        File publicProfile = new File("MyPublicProfiles/" + profileName + "/public");
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File(profileName));
-        fileChooser.showSaveDialog(null);
-        File destination = fileChooser.getSelectedFile();
-        if(destination == null) {
-            return;
-        }
-        Files.copy(publicProfile.toPath(), destination.toPath());
+    private static void exportPublicProfile(String profileName, File destination) throws IOException {
+        FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + profileName);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        byte[] privateKey_b = sliceReader.next();
+        byte[] publicKey_b = sliceReader.next();
+
+        FileOutputStream fos = new FileOutputStream(destination);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        sliceWriter.write(profileName.getBytes());
+        sliceWriter.write(publicKey_b);
     }
 }
