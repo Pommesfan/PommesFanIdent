@@ -15,22 +15,82 @@ public class Main {
     public static final Scanner sc = new Scanner(System.in);
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil importieren\n5: Ausweis importieren\n6: Öffentliches Profil exportieren\n7: Ausweis exportieren");
+        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren");
         int mode = sc.nextInt();
         switch (mode) {
-            case 1: generateKeyPair(); break;
-            case 2: generateID(); break;
-            case 3: checkPersonalID(); break;
-            case 4: importPublicProfile(); break;
-            case 5: importPersonalID(); break;
-            case 6: exportPublicProfile(); break;
-            case 7: exportPersonalID(); break;
+            case 1: doGenerateKeyPair(); break;
+            case 2: doGenerateID(); break;
+            case 3: doCheckPersonalID(); break;
+            case 4: doExportPublicProfile(); break;
+            case 5: doImportPublicProfile(); break;
+            case 6: doExportPersonalID(); break;
+            case 7: doImportPersonalID(); break;
         }
     }
 
-    public static void generateKeyPair() throws NoSuchAlgorithmException, IOException {
+    private static void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException {
         System.out.println("Name für Öffentliches Profil:");
-        String profileName = sc.next();
+        generateKeyPair(sc.next());
+    }
+
+    private static void doGenerateID() throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        System.out.println("Öffentliches Profil auswählen");
+        String publicProfile = sc.next();
+        System.out.println("Vorname");
+        String name = sc.next();
+        System.out.println("Nachname");
+        String surname = sc.next();
+        System.out.println("Geburtsdatum");
+        String birthdate = sc.next();
+        Date date = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate);
+        System.out.println("Adresse");
+        String address = sc.next();
+        // get personalPicture
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File personalPicture = fileChooser.getSelectedFile();
+        if(personalPicture == null) {
+            return;
+        }
+        generateID(publicProfile, name, surname, date, address, personalPicture);
+    }
+
+    private static void doCheckPersonalID() throws Exception {
+        System.out.println("Ausweis auswählen");
+        checkPersonalID(sc.next().toUpperCase());
+    }
+
+    private static void doImportPublicProfile() throws IOException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File publicProfile = fileChooser.getSelectedFile();
+        if(publicProfile == null) {
+            return;
+        }
+        importPublicProfile(publicProfile);
+    }
+
+    private static void doImportPersonalID() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File source = fileChooser.getSelectedFile();
+        if(source == null) {
+            return;
+        }
+        importPersonalID(source);
+    }
+
+    private static void doExportPublicProfile() throws IOException {
+        System.out.println("Profilname angeben");
+        exportPublicProfile(sc.next());
+    }
+
+    private static void doExportPersonalID() throws IOException {
+        System.out.println("Ausweisnummer angeben");
+        exportPersonalID(sc.next());
+    }
+
+    public static void generateKeyPair(String profileName) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator gpk = KeyPairGenerator.getInstance("RSA");
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
@@ -48,31 +108,10 @@ public class Main {
         fos.close();
     }
 
-    private static void generateID() throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    private static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = Utils.getAlphanumeric(8);
-
-        System.out.println("Öffentliches Profil auswählen");
-        String publicProfile = sc.next();
-        File privateKeyFile = new File("MyPublicProfiles/" + publicProfile + "/private");
-
         System.out.println(ID_number);
-        System.out.println("Vorname");
-        String name = sc.next();
-        System.out.println("Nachname");
-        String surname = sc.next();
-        System.out.println("Geburtsdatum");
-        String birthdate = sc.next();
-        Date date = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate);
-        System.out.println("Adresse");
-        String address = sc.next();
-
-        // get personalPicture
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.showOpenDialog(null);
-        File personalPicture = fileChooser.getSelectedFile();
-        if(personalPicture == null) {
-            return;
-        }
+        File privateKeyFile = new File("MyPublicProfiles/" + publicProfile + "/private");
 
         String personalPictureFileName = personalPicture.getName();
         String internalPath = "PersonalImages/" + personalPictureFileName;
@@ -123,10 +162,7 @@ public class Main {
         return publicSignature.verify(signature_b);
     }
 
-    private static void checkPersonalID() throws Exception {
-        System.out.println("Ausweis auswählen");
-        String id_number = sc.next().toUpperCase();
-
+    private static void checkPersonalID(String id_number) throws Exception {
         String distPath = "ImportedPersonalIDs/" + id_number;
 
         //load personal id
@@ -150,14 +186,7 @@ public class Main {
         }
     }
 
-    private static void importPublicProfile() throws IOException {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.showOpenDialog(null);
-        File publicProfile = fileChooser.getSelectedFile();
-        if(publicProfile == null) {
-            return;
-        }
-
+    private static void importPublicProfile(File publicProfile) throws IOException {
         String profileFileName = publicProfile.getName();
         String internalPath = "ImportedPublicProfiles/" + profileFileName;
         File distDir = new File("ImportedPublicProfiles/");
@@ -165,13 +194,7 @@ public class Main {
         Files.copy(Paths.get(publicProfile.toURI()), Paths.get(internalPath));
     }
 
-    private static void importPersonalID() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        JFileChooser fileChooser = new JFileChooser();
-        fileChooser.showOpenDialog(null);
-        File source = fileChooser.getSelectedFile();
-        if(source == null) {
-            return;
-        }
+    private static void importPersonalID(File source) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         FileInputStream fis = new FileInputStream(source);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
 
@@ -214,10 +237,7 @@ public class Main {
         System.out.println();
     }
 
-    private static void exportPersonalID() throws IOException {
-        System.out.println("Ausweisnummer angeben");
-        String personal_id = sc.next().toUpperCase();
-
+    private static void exportPersonalID(String personal_id) throws IOException {
         String distPath = "CreatedPersonalIDs/" + personal_id;
 
         //load personal id
@@ -243,16 +263,12 @@ public class Main {
 
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-
         sliceWriter.write(personal_id_b);
         sliceWriter.write(signature_b);
         sliceWriter.write(personalImage_b);
     }
 
-    private static void exportPublicProfile() throws IOException {
-        System.out.println("Profilname angeben");
-        String profileName = sc.next();
-
+    private static void exportPublicProfile(String profileName) throws IOException {
         File publicProfile = new File("MyPublicProfiles/" + profileName + "/public");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File(profileName));
