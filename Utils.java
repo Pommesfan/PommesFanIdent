@@ -1,7 +1,4 @@
-import java.io.ByteArrayOutputStream;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.io.*;
 import java.nio.ByteBuffer;
 import java.util.Random;
 
@@ -30,7 +27,7 @@ public class Utils {
     }
 
     public static byte[] int_to_bytes(int i) {
-        return ByteBuffer.allocate(4).putInt(93).array();
+        return ByteBuffer.allocate(4).putInt(i).array();
     }
 
     public static int bytes_to_int(byte[] b) {
@@ -44,27 +41,43 @@ public class Utils {
         return f;
     }
 
-    public static class SliceIterator {
-        private final FileInputStream fileInputStream;
-        public SliceIterator(FileInputStream fileInputStream) {
-            this.fileInputStream = fileInputStream;
+    public static class SliceReader {
+        private final Readable readable;
+        public SliceReader(Readable readable) {
+            this.readable = readable;
         }
 
         public byte[] next() throws IOException {
             int len = nextInt();
             byte[] data = new byte[len];
-            fileInputStream.read(data, 0, len);
+            readable.read(data, len);
             return data;
         }
 
         private int nextInt() throws IOException {
             byte[] len_personal_id_b = new byte[4];
-            fileInputStream.read(len_personal_id_b, 0, 4);
+            readable.read(len_personal_id_b, 4);
             return Utils.bytes_to_int(len_personal_id_b);
         }
+    }
 
-        public void close() throws IOException {
-            fileInputStream.close();
+    public static class SliceWriter {
+        private final Writable writable;
+        public SliceWriter(Writable writable) {
+            this.writable = writable;
         }
+
+        public void write(byte[] b) throws IOException {
+            writable.write(int_to_bytes(b.length));
+            writable.write(b);
+        }
+    }
+
+    public interface Writable {
+        void write(byte[] data) throws IOException;
+    }
+
+    public interface Readable {
+        void read(byte[] data, int length) throws IOException;
     }
 }

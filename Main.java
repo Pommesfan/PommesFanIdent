@@ -173,15 +173,14 @@ public class Main {
             return;
         }
         FileInputStream fis = new FileInputStream(source);
-        Utils.SliceIterator sliceIterator = new Utils.SliceIterator(fis);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
 
         // read personal id
-        byte[] personal_id_b = sliceIterator.next();
+        byte[] personal_id_b = sliceReader.next();
         // read signature
-        byte[] signature_b = sliceIterator.next();
+        byte[] signature_b = sliceReader.next();
         // read personal image
-        byte[] personal_image_b = sliceIterator.next();
-        sliceIterator.close();
+        byte[] personal_image_b = sliceReader.next();
 
         // extract id number and image name
         String[] personal_id_s = new String(personal_id_b).split("\n");
@@ -243,13 +242,11 @@ public class Main {
         }
 
         FileOutputStream fos = new FileOutputStream(destination);
-        fos.write(Utils.int_to_bytes(personal_id_b.length));
-        fos.write(personal_id_b);
-        fos.write(Utils.int_to_bytes(signature_b.length));
-        fos.write(signature_b);
-        fos.write(Utils.int_to_bytes(personalImage_b.length));
-        fos.write(personalImage_b);
-        fos.close();
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+
+        sliceWriter.write(personal_id_b);
+        sliceWriter.write(signature_b);
+        sliceWriter.write(personalImage_b);
     }
 
     private static void exportPublicProfile() throws IOException {
