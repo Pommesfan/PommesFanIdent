@@ -1,7 +1,7 @@
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
+import java.io.*;
+import java.net.InetAddress;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.*;
@@ -29,8 +29,8 @@ public class Controller {
         fos.close();
     }
 
-    private static byte[] sign_id(byte[] personalIdB, File publicProfileFile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        FileInputStream fis = new FileInputStream(publicProfileFile);
+    private static byte[] sign_id(byte[] personalIdB, String publicProfile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + publicProfile);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] privateKeyBytes = sliceReader.next();
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKeyBytes);
@@ -45,7 +45,6 @@ public class Controller {
     public static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = Utils.getAlphanumeric(8);
         System.out.println(ID_number);
-        File publicProfileFile = new File(appDataLocation + "MyPublicProfiles/" + publicProfile);
 
         String personalPictureFileName = personalPicture.getName();
         String internalPath = appDataLocation + "PersonalImages/" + personalPictureFileName;
@@ -58,7 +57,7 @@ public class Controller {
 
         //Create signature
         byte[] personalId_with_personal_image_b = Utils.concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
-        byte[] signature_b = sign_id(personalId_with_personal_image_b, publicProfileFile);
+        byte[] signature_b = sign_id(personalId_with_personal_image_b, publicProfile);
 
         String distPath = appDataLocation + "CreatedPersonalIDs/" + ID_number;
 
@@ -195,7 +194,49 @@ public class Controller {
         FileOutputStream fos2 = new FileOutputStream(f_personal_image);
         fos2.write(personal_image_b);
         fos2.close();
+    }
 
-        System.out.println();
+    public static void checkPersonalIDFromRemote() throws Exception {
+        System.out.println("Ip-Adresse:");
+        System.out.println(InetAddress.getLocalHost().getHostAddress());
+        ServerSocket serverSocket = new ServerSocket(0);
+        System.out.println("Portnummer:");
+        System.out.println(serverSocket.getLocalPort());
+        Socket s = serverSocket.accept();
+        InputStream inputStream = new BufferedInputStream(s.getInputStream());
+
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> inputStream.read(data, 0, length));
+        byte[] personal_id_b = sliceReader.next();
+        byte[] personal_image_b = sliceReader.next();
+        byte[] signature_b = sliceReader.next();
+        inputStream.close();
+        String[] personal_id_s = new String(personal_id_b).split("\n");
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b), personal_id_s[1], signature_b)) {
+            System.out.println(new Personal_ID(personal_id_s));
+        } else {
+            System.out.println("Ausweis nicht gültig");
+        }
+    }
+
+    public static void handInPersonalIDtoRemote(String id_number, String ip, int port) throws IOException {
+        Socket s = new Socket(ip, port);
+        //load personal id
+        String distPath = appDataLocation + "CreatedPersonalIDs/" + id_number.toUpperCase();
+        FileInputStream fis = new FileInputStream(distPath);
+        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        byte[] personal_id_b = sliceReader.next();
+        byte[] signature_b = sliceReader.next();
+        // load personal image
+        String[] personal_id_s = new String(personal_id_b).split("\n");
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personal_id_s[8]));
+        fis.close();
+        OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
+
+        //hand in
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> outputStream.write(data));
+        sliceWriter.write(personal_id_b);
+        sliceWriter.write(personalImage_b);
+        sliceWriter.write(signature_b);
+        outputStream.close();
     }
 }

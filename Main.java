@@ -9,9 +9,13 @@ import java.util.Scanner;
 
 public class Main {
     public static final Scanner sc = new Scanner(System.in);
+    public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
+            "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
+            "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
+            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung";
 
     public static void main(String[] args) throws Exception {
-        System.out.println("Aktion auswählen:\n1: Öffentliches Profil erstellen\n2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren");
+        System.out.println(introMessage);
         int mode = sc.nextInt();
         switch (mode) {
             case 1: doGenerateKeyPair(); break;
@@ -21,6 +25,8 @@ public class Main {
             case 5: doImportPublicProfile(); break;
             case 6: doExportPersonalID(); break;
             case 7: doImportPersonalID(); break;
+            case 8: doCheckPersonalIDFromRemote(); break;
+            case 9: doHandInPersonalIDtoRemote(); break;
         }
     }
 
@@ -105,5 +111,19 @@ public class Main {
             return;
         }
         Controller.exportPersonalID(id_number, destination);
+    }
+
+    private static void doCheckPersonalIDFromRemote() throws Exception {
+        Controller.checkPersonalIDFromRemote();
+    }
+
+    private static void doHandInPersonalIDtoRemote() throws IOException {
+        System.out.println("Ausweisnummer angeben:");
+        String id_number = sc.next();
+        System.out.println("IP-Adresse angeben:");
+        String ip = sc.next();
+        System.out.println("Portnummer angeben:");
+        int port = sc.nextInt();
+        Controller.handInPersonalIDtoRemote(id_number, ip, port);
     }
 }
