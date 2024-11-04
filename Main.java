@@ -48,14 +48,24 @@ public class Main {
         System.out.println("Adresse");
         String address = sc.next();
         // get personalPicture
-        System.out.println("Bild auswählen");
+        System.out.println("Passbild auswählen:");
+
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.showOpenDialog(null);
         File personalPicture = fileChooser.getSelectedFile();
         if(personalPicture == null) {
             return;
         }
-        Controller.generateID(publicProfile, name, surname, date, address, personalPicture);
+
+        System.out.println("Bild von händischer Unterschrift auswählen:");
+        fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File handSignature = fileChooser.getSelectedFile();
+        if(handSignature == null) {
+            return;
+        }
+
+        Controller.generateID(publicProfile, name, surname, date, address, personalPicture, handSignature);
     }
 
     private static void doCheckPersonalID() throws Exception {

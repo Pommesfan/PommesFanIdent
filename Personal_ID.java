@@ -14,8 +14,9 @@ public class Personal_ID {
     public final int birthdate_year;
     public final String address;
     public final String personalImagePath;
+    public final String handSignaturePath;
 
-    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate, String pAddress, String pPersonalImagePath) {
+    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate, String pAddress, String pPersonalImagePath, String pHandSignaturePath) {
         Calendar calendar = new GregorianCalendar();
         calendar.setTime(pBirthDate);
         ID_number = pIDnumber;
@@ -27,10 +28,11 @@ public class Personal_ID {
         birthdate_year = calendar.get(Calendar.YEAR);
         address = pAddress;
         personalImagePath = pPersonalImagePath;
+        handSignaturePath = pHandSignaturePath;
     }
 
     public Personal_ID(String[] attributes) throws Exception {
-        if(attributes.length != 9) {
+        if(attributes.length != 10) {
             throw new Exception("number of attributes not suitable");
         }
         ID_number = attributes[0];
@@ -42,6 +44,7 @@ public class Personal_ID {
         birthdate_year = Integer.parseInt(attributes[6]);
         address = attributes[7];
         personalImagePath = attributes[8];
+        handSignaturePath = attributes[9];
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {
@@ -64,6 +67,8 @@ public class Personal_ID {
         baos.write('\n');
         if(withPaths) {
             baos.write(personalImagePath.getBytes());
+            baos.write('\n');
+            baos.write(handSignaturePath.getBytes());
             baos.write('\n');
         }
         return baos.toByteArray();
@@ -90,6 +95,8 @@ public class Personal_ID {
         sb.append(address);
         sb.append("\nPfad Passbild:\n");
         sb.append(personalImagePath);
+        sb.append("\nPfad händische Signatur:\n");
+        sb.append(handSignaturePath);
         sb.append('\n');
         return sb.toString();
     }

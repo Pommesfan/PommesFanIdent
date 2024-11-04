@@ -19,10 +19,11 @@ public class Utils {
         return stringBuilder.toString();
     }
 
-    public static byte[] concat_bytes(byte[] personalIdB, byte[] personalImage) throws IOException {
+    public static byte[] concat_bytes(byte[] personalIdB, byte[] personalImage, byte[] handSignature) throws IOException {
         ByteArrayOutputStream baos = new ByteArrayOutputStream(personalIdB.length + personalImage.length);
         baos.write(personalIdB);
         baos.write(personalImage);
+        baos.write(handSignature);
         return baos.toByteArray();
     }
 

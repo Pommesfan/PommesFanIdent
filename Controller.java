@@ -42,21 +42,29 @@ public class Controller {
         return signature.sign();
     }
 
-    public static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    public static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture, File handSignature) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = Utils.getAlphanumeric(8);
         System.out.println(ID_number);
 
+        // get personal image
         String personalPictureFileName = personalPicture.getName();
-        String internalPath = appDataLocation + "PersonalImages/" + personalPictureFileName;
-        File imageDir = new File(appDataLocation + "PersonalImages/");
-        imageDir.mkdirs();
-        Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath));
+        String internalPath1 = appDataLocation + "PersonalImages/" + personalPictureFileName;
+        File imageDir1 = new File(appDataLocation + "PersonalImages/");
+        imageDir1.mkdirs();
+        Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath1));
+        // get hand signature
+        String handSignatureFileName = personalPicture.getName();
+        String internalPath2 = appDataLocation + "HandSignatures/" + personalPictureFileName;
+        File imageDir2 = new File(appDataLocation + "HandSignatures/");
+        imageDir2.mkdirs();
+        Files.copy(Paths.get(handSignature.toURI()), Paths.get(internalPath2));
 
-        Personal_ID personalId = new Personal_ID(ID_number, publicProfile,  name, surname, date, address, personalPictureFileName);
+        Personal_ID personalId = new Personal_ID(ID_number, publicProfile,  name, surname, date, address, personalPictureFileName, handSignatureFileName);
         byte[] personalId_b = personalId.toByte(true);
 
         //Create signature
-        byte[] personalId_with_personal_image_b = Utils.concat_bytes(personalId_b, Files.readAllBytes(personalPicture.toPath()));
+        byte[] personalId_with_personal_image_b = Utils.concat_bytes(
+                personalId_b, Files.readAllBytes(personalPicture.toPath()), Files.readAllBytes(handSignature.toPath()));
         byte[] signature_b = sign_id(personalId_with_personal_image_b, publicProfile);
 
         String distPath = appDataLocation + "CreatedPersonalIDs/" + ID_number;
@@ -98,8 +106,10 @@ public class Controller {
         Personal_ID personalId = new Personal_ID(personal_id_s);
         String personalImage = appDataLocation + "PersonalImages/" + personalId.personalImagePath;
         byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
+        String handSignature = appDataLocation + "HandSignatures/" + personalId.personalImagePath;
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(handSignature));
 
-        if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b), personal_id_s[1], signature_b)) {
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), personal_id_s[1], signature_b)) {
             System.out.println("Ausweis ist korrekt\n");
             System.out.println(personalId);
         } else {
@@ -145,16 +155,18 @@ public class Controller {
         byte[] signature_b = sliceReader.next();
         fis.close();
 
-        // load personal image
         String[] personal_id_s = new String(personal_id_b).split("\n");
-        f = new File(appDataLocation + "PersonalImages/" + personal_id_s[8]);
-        byte[] personalImage_b = Files.readAllBytes(f.toPath());
+        // load personal image
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personal_id_s[8]));
+        // load hand signature
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personal_id_s[8]));
 
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
         sliceWriter.write(personal_id_b);
         sliceWriter.write(signature_b);
         sliceWriter.write(personalImage_b);
+        sliceWriter.write(handSignature_b);
         fos.close();
     }
 
@@ -165,8 +177,9 @@ public class Controller {
         byte[] personal_id_b = sliceReader.next();
         // read signature
         byte[] signature_b = sliceReader.next();
-        // read personal image
-        byte[] personal_image_b = sliceReader.next();
+        // read personal image and hand signature
+        byte[] personalImage_b = sliceReader.next();
+        byte[] handSignature_b = sliceReader.next();
         fis.close();
 
         // extract id number and image name
@@ -174,8 +187,11 @@ public class Controller {
         String id_number = personal_id_s[0];
         String publicProfile = personal_id_s[1];
         String imageName = personal_id_s[8];
+        String handSignatureName = personal_id_s[9];
 
-        if(!validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b), publicProfile, signature_b)) {
+        if(!validateSignature(
+                Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b),
+                publicProfile, signature_b)) {
             System.err.println("Ausweis ungültig");
             return;
         }
@@ -192,8 +208,13 @@ public class Controller {
 
         File f_personal_image = Utils.createFileAndSubfolder(appDataLocation + "PersonalImages/" + imageName);
         FileOutputStream fos2 = new FileOutputStream(f_personal_image);
-        fos2.write(personal_image_b);
+        fos2.write(personalImage_b);
         fos2.close();
+
+        File f_hand_signature = Utils.createFileAndSubfolder(appDataLocation + "HandSignatures/" + handSignatureName);
+        FileOutputStream fos3 = new FileOutputStream(f_hand_signature);
+        fos3.write(handSignature_b);
+        fos3.close();
     }
 
     public static void checkPersonalIDFromRemote() throws Exception {
@@ -208,10 +229,12 @@ public class Controller {
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> inputStream.read(data, 0, length));
         byte[] personal_id_b = sliceReader.next();
         byte[] personal_image_b = sliceReader.next();
+        byte[] handSignature_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         inputStream.close();
+        serverSocket.close();
         String[] personal_id_s = new String(personal_id_b).split("\n");
-        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b), personal_id_s[1], signature_b)) {
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), personal_id_s[1], signature_b)) {
             System.out.println(new Personal_ID(personal_id_s));
         } else {
             System.out.println("Ausweis nicht gültig");
@@ -221,7 +244,7 @@ public class Controller {
     public static void handInPersonalIDtoRemote(String id_number, String ip, int port) throws IOException {
         Socket s = new Socket(ip, port);
         //load personal id
-        String distPath = appDataLocation + "CreatedPersonalIDs/" + id_number.toUpperCase();
+        String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
         FileInputStream fis = new FileInputStream(distPath);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] personal_id_b = sliceReader.next();
@@ -229,6 +252,7 @@ public class Controller {
         // load personal image
         String[] personal_id_s = new String(personal_id_b).split("\n");
         byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personal_id_s[8]));
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personal_id_s[9]));
         fis.close();
         OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
 
@@ -236,6 +260,7 @@ public class Controller {
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> outputStream.write(data));
         sliceWriter.write(personal_id_b);
         sliceWriter.write(personalImage_b);
+        sliceWriter.write(handSignature_b);
         sliceWriter.write(signature_b);
         outputStream.close();
     }
