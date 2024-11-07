@@ -1,3 +1,7 @@
+package controller;
+
+import model.Personal_ID;
+import utils.Utils;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -10,11 +14,15 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Date;
+import java.util.Observable;
 
-public class Controller {
-    public static String appDataLocation = "data/";
+public class Controller extends Observable {
+    public final String appDataLocation;
+    public Controller(String appDataLocation) {
+        this.appDataLocation = appDataLocation;
+    }
 
-    public static void generateKeyPair(String profileName) throws NoSuchAlgorithmException, IOException {
+    public void generateKeyPair(String profileName) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator gpk = KeyPairGenerator.getInstance("RSA");
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
@@ -29,7 +37,7 @@ public class Controller {
         fos.close();
     }
 
-    private static byte[] sign_id(byte[] personalIdB, String publicProfile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    private byte[] sign_id(byte[] personalIdB, String publicProfile) throws NoSuchAlgorithmException, IOException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + publicProfile);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] privateKeyBytes = sliceReader.next();
@@ -42,7 +50,7 @@ public class Controller {
         return signature.sign();
     }
 
-    public static void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture, File handSignature) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    public void generateID(String publicProfile, String name, String surname, Date date, String address, File personalPicture, File handSignature) throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         String ID_number = Utils.getAlphanumeric(8);
         System.out.println(ID_number);
 
@@ -78,7 +86,7 @@ public class Controller {
         fos.close();
     }
 
-    private static boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
+    private boolean validateSignature(byte[] personal_id_b, String publicProfile, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
         File publicKeyFile = new File(appDataLocation + "ImportedPublicProfiles/" + publicProfile);
         byte[] publicKey = Files.readAllBytes(publicKeyFile.toPath());
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKey);
@@ -90,7 +98,7 @@ public class Controller {
         return publicSignature.verify(signature_b);
     }
 
-    public static void checkPersonalID(String id_number) throws Exception {
+    public void checkPersonalID(String id_number) throws Exception {
         String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
 
         //load personal id
@@ -117,7 +125,7 @@ public class Controller {
         }
     }
 
-    public static void exportPublicProfile(String profileName, File destination) throws IOException {
+    public void exportPublicProfile(String profileName, File destination) throws IOException {
         FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + profileName);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] privateKey_b = sliceReader.next();
@@ -129,7 +137,7 @@ public class Controller {
         sliceWriter.write(publicKey_b);
     }
 
-    public static void importPublicProfile(File publicProfile) throws IOException {
+    public void importPublicProfile(File publicProfile) throws IOException {
         FileInputStream fis = new FileInputStream(publicProfile);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         String public_profile_name = new String(sliceReader.next());
@@ -144,7 +152,7 @@ public class Controller {
         fos.close();
     }
 
-    public static void exportPersonalID(String personal_id, File destination) throws IOException {
+    public void exportPersonalID(String personal_id, File destination) throws IOException {
         String distPath = appDataLocation + "CreatedPersonalIDs/" + personal_id.toUpperCase();
 
         //load personal id
@@ -170,7 +178,7 @@ public class Controller {
         fos.close();
     }
 
-    public static void importPersonalID(File source) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    public void importPersonalID(File source) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         FileInputStream fis = new FileInputStream(source);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         // read personal id
@@ -217,7 +225,7 @@ public class Controller {
         fos3.close();
     }
 
-    public static void checkPersonalIDFromRemote() throws Exception {
+    public void checkPersonalIDFromRemote() throws Exception {
         System.out.println("Ip-Adresse:");
         System.out.println(InetAddress.getLocalHost().getHostAddress());
         ServerSocket serverSocket = new ServerSocket(0);
@@ -241,7 +249,7 @@ public class Controller {
         }
     }
 
-    public static void handInPersonalIDtoRemote(String id_number, String ip, int port) throws IOException {
+    public void handInPersonalIDtoRemote(String id_number, String ip, int port) throws IOException {
         Socket s = new Socket(ip, port);
         //load personal id
         String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
