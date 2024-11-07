@@ -8,12 +8,8 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
 import java.security.spec.InvalidKeySpecException;
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Observable;
-import java.util.Observer;
-import java.util.Scanner;
+import java.util.*;
 
 public class TUI implements Observer {
     public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
@@ -47,10 +43,16 @@ public class TUI implements Observer {
     }
     private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException {
         System.out.println("Name für Öffentliches Profil:");
-        controller.generateKeyPair(sc.next());
+        String name = sc.next();
+        System.out.println("Dynamische Attribute:\nAnzahl eingeben, dann Attribute:");
+        String[] dynamicAttributes = new String[sc.nextInt()];
+        for (int i = 0; i < dynamicAttributes.length; i++) {
+            dynamicAttributes[i] = sc.next();
+        }
+        controller.generateKeyPair(name, dynamicAttributes);
     }
 
-    private void doGenerateID() throws ParseException, IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    private void doGenerateID() throws Exception {
         System.out.println("Öffentliches Profil auswählen");
         String publicProfile = sc.next();
         System.out.println("Vorname");
@@ -62,6 +64,11 @@ public class TUI implements Observer {
         Date date = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate);
         System.out.println("Adresse");
         String address = sc.next();
+        System.out.println("Dynamische Attribute:\nAnzahl eingeben, dann Attribute");
+        String[] dynamicAttributeValues = new String[sc.nextInt()];
+        for (int i = 0; i < dynamicAttributeValues.length; i++) {
+            dynamicAttributeValues[i] = sc.next();
+        }
         // get personalPicture
         System.out.println("Passbild auswählen:");
 
@@ -80,7 +87,7 @@ public class TUI implements Observer {
             return;
         }
 
-        controller.generateID(publicProfile, name, surname, date, address, personalPicture, handSignature);
+        controller.generateID(publicProfile, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
     }
 
     private void doCheckPersonalID() throws Exception {
@@ -99,7 +106,7 @@ public class TUI implements Observer {
         controller.importPublicProfile(publicProfile);
     }
 
-    private void doImportPersonalID() throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+    private void doImportPersonalID() throws Exception {
         System.out.println("Ausweis aus Datei auswählen!");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.showOpenDialog(null);
@@ -124,7 +131,7 @@ public class TUI implements Observer {
         controller.exportPublicProfile(profileName, destination);
     }
 
-    private void doExportPersonalID() throws IOException {
+    private void doExportPersonalID() throws Exception {
         System.out.println("Ausweisnummer angeben");
         String id_number = sc.next();
         System.out.println("Zielordner wählen!");

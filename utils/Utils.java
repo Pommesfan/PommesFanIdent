@@ -2,6 +2,7 @@ package utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.util.List;
 import java.util.Random;
 
 public class Utils {
@@ -42,6 +43,15 @@ public class Utils {
         f.getParentFile().mkdirs();
         f.createNewFile();
         return f;
+    }
+
+    public static String stringArrayToLines(String[] dynamicAttributes) {
+        StringBuilder sb = new StringBuilder();
+        for(String s: dynamicAttributes) {
+            sb.append(s);
+            sb.append('\n');
+        }
+        return sb.toString();
     }
 
     public static class SliceReader {

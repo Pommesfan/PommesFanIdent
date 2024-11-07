@@ -1,10 +1,10 @@
 package model;
 
+import utils.Utils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.*;
 
 public class Personal_ID {
     public final String ID_number;
@@ -15,10 +15,13 @@ public class Personal_ID {
     public final int birthdate_month;
     public final int birthdate_year;
     public final String address;
+    public final String[] dynamicAttributes;
+    public final String[] dynamicAttributesValues;
     public final String personalImagePath;
     public final String handSignaturePath;
 
-    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate, String pAddress, String pPersonalImagePath, String pHandSignaturePath) {
+    public Personal_ID(String pIDnumber, String pPublicProfile, String pName, String pSurname, Date pBirthDate,
+                       String pAddress, String[] pDynamicAttributes, String[] pDynamicAttributesValues, String pPersonalImagePath, String pHandSignaturePath) {
         Calendar calendar = new GregorianCalendar();
         calendar.setTime(pBirthDate);
         ID_number = pIDnumber;
@@ -29,14 +32,18 @@ public class Personal_ID {
         birthdate_month = calendar.get(Calendar.MONTH) + 1;
         birthdate_year = calendar.get(Calendar.YEAR);
         address = pAddress;
+        dynamicAttributes = pDynamicAttributes;
+        dynamicAttributesValues = pDynamicAttributesValues;
         personalImagePath = pPersonalImagePath;
         handSignaturePath = pHandSignaturePath;
     }
 
-    public Personal_ID(String[] attributes) throws Exception {
-        if(attributes.length != 10) {
+    public Personal_ID(String[] attributes, String[] pDynamicAttributes) throws Exception {
+        int nDynamicAttributes = pDynamicAttributes.length;
+        if(attributes.length != 10 + nDynamicAttributes) {
             throw new Exception("number of attributes not suitable");
         }
+        dynamicAttributes = pDynamicAttributes;
         ID_number = attributes[0];
         publicProfile = attributes[1];
         name = attributes[2];
@@ -45,8 +52,15 @@ public class Personal_ID {
         birthdate_month = Integer.parseInt(attributes[5]);
         birthdate_year = Integer.parseInt(attributes[6]);
         address = attributes[7];
-        personalImagePath = attributes[8];
-        handSignaturePath = attributes[9];
+
+        String[] s = new String[nDynamicAttributes];
+        for (int i = 0; i < nDynamicAttributes; i++) {
+            s[i] = attributes[8 + i];
+        }
+        dynamicAttributesValues = s;
+
+        personalImagePath = attributes[8 + nDynamicAttributes];
+        handSignaturePath = attributes[9 + nDynamicAttributes];
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {
@@ -67,6 +81,12 @@ public class Personal_ID {
         baos.write('\n');
         baos.write(address.getBytes());
         baos.write('\n');
+
+        for (String attribute : dynamicAttributesValues) {
+            baos.write(attribute.getBytes());
+            baos.write('\n');
+        }
+
         if(withPaths) {
             baos.write(personalImagePath.getBytes());
             baos.write('\n');
@@ -95,6 +115,14 @@ public class Personal_ID {
         sb.append(birthdate_year);
         sb.append("\nAdresse:\n");
         sb.append(address);
+
+        for (int i = 0; i < dynamicAttributes.length; i++) {
+            sb.append('\n');
+            sb.append(dynamicAttributes[i]);
+            sb.append(":\n");
+            sb.append(dynamicAttributesValues[i]);
+        }
+
         sb.append("\nPfad Passbild:\n");
         sb.append(personalImagePath);
         sb.append("\nPfad händische Signatur:\n");
