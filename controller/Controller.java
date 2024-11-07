@@ -297,14 +297,21 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
+        String[] dynamicAttributes;
+        if(dynamicAttributes_b.length == 0) {
+            dynamicAttributes = new String[0];
+        } else {
+            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
+        }
+
         if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicKey, signature_b)) {
-            System.out.println(new Personal_ID(personal_id_s, new String(dynamicAttributes_b).split("\n")));
+            System.out.println(new Personal_ID(personal_id_s, dynamicAttributes));
         } else {
             System.out.println("Ausweis nicht gültig");
         }
     }
 
-    public void handInPersonalIDtoRemote(String id_number, String ip, int port) throws IOException {
+    public void handInPersonalIDtoRemote(String id_number, String ip, int port) throws Exception {
         Socket s = new Socket(ip, port);
         //load personal id
         String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
@@ -314,8 +321,25 @@ public class Controller extends Observable {
         byte[] signature_b = sliceReader.next();
         // load personal image
         String[] personal_id_s = new String(personal_id_b).split("\n");
-        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personal_id_s[8]));
-        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personal_id_s[9]));
+
+        // load public profile
+        FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
+        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
+        byte[] dynamicAttributes_b = sliceReader2.next();
+        byte[] publicKey = sliceReader2.next();
+        fis2.close();
+
+        String[] dynamicAttributes;
+        if(dynamicAttributes_b.length == 0) {
+            dynamicAttributes = new String[0];
+        } else {
+            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
+        }
+
+        Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personalId.handSignaturePath));
         fis.close();
         OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
 
