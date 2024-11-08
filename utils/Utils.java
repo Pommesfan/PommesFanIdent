@@ -53,6 +53,14 @@ public class Utils {
         return sb.toString();
     }
 
+    public static String[] bytesToStringArray(byte[] data) {
+        if(data.length == 0) {
+            return new String[0];
+        } else {
+            return new String(data).split("\n");
+        }
+    }
+
     public static class SliceReader {
         private final Readable readable;
         public SliceReader(Readable readable) {

@@ -162,6 +162,7 @@ public class TUI implements Observer {
     }
 
     private void doShowPublicProfile() {
+
     }
 
     @Override

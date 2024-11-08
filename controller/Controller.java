@@ -53,7 +53,7 @@ public class Controller extends Observable {
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] dynamicAttributes_b = sliceReader.next();
         byte[] privateKey = sliceReader.next();
-        String[] dynamicAttributes = new String(dynamicAttributes_b).split("\n");
+        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
         if(dynamicAttributeValues.length != dynamicAttributes.length) {
             throw new Exception("Anzahl dynamischer Attribute unpassend");
         }
@@ -114,7 +114,7 @@ public class Controller extends Observable {
         byte[] personal_id_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         fis.close();
-        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
         FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
@@ -123,12 +123,7 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
-        String[] dynamicAttributes;
-        if(dynamicAttributes_b.length == 0) {
-            dynamicAttributes = new String[0];
-        } else {
-            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
-        }
+        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
 
         Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
         String personalImage = appDataLocation + "PersonalImages/" + personalId.personalImagePath;
@@ -187,7 +182,7 @@ public class Controller extends Observable {
         byte[] signature_b = sliceReader.next();
         fis.close();
 
-        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
         FileInputStream fis2 = new FileInputStream(appDataLocation + "MyPublicProfiles/" + personal_id_s[1]);
@@ -196,7 +191,7 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
-        Personal_ID personalId = new Personal_ID(personal_id_s, new String(dynamicAttributes_b).split("\n"));
+        Personal_ID personalId = new Personal_ID(personal_id_s, Utils.bytesToStringArray(dynamicAttributes_b));
         // load personal image
         byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
         // load hand signature
@@ -222,7 +217,7 @@ public class Controller extends Observable {
         byte[] personalImage_b = sliceReader.next();
         byte[] handSignature_b = sliceReader.next();
         fis.close();
-        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
         FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
@@ -231,12 +226,7 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
-        String[] dynamicAttributes;
-        if(dynamicAttributes_b.length == 0) {
-            dynamicAttributes = new String[0];
-        } else {
-            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
-        }
+        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
 
         Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
         // extract id number and image name
@@ -288,7 +278,7 @@ public class Controller extends Observable {
         byte[] signature_b = sliceReader.next();
         inputStream.close();
         serverSocket.close();
-        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
         FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
@@ -297,12 +287,7 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
-        String[] dynamicAttributes;
-        if(dynamicAttributes_b.length == 0) {
-            dynamicAttributes = new String[0];
-        } else {
-            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
-        }
+        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
 
         if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicKey, signature_b)) {
             System.out.println(new Personal_ID(personal_id_s, dynamicAttributes));
@@ -320,7 +305,7 @@ public class Controller extends Observable {
         byte[] personal_id_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         // load personal image
-        String[] personal_id_s = new String(personal_id_b).split("\n");
+        String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
         FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
@@ -329,12 +314,7 @@ public class Controller extends Observable {
         byte[] publicKey = sliceReader2.next();
         fis2.close();
 
-        String[] dynamicAttributes;
-        if(dynamicAttributes_b.length == 0) {
-            dynamicAttributes = new String[0];
-        } else {
-            dynamicAttributes = new String(dynamicAttributes_b).split("\n");
-        }
+        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
 
         Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
 
