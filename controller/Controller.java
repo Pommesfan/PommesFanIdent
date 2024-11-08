@@ -1,6 +1,7 @@
 package controller;
 
 import model.Personal_ID;
+import utils.OutputEvent;
 import utils.Utils;
 import java.io.*;
 import java.net.InetAddress;
@@ -59,8 +60,6 @@ public class Controller extends Observable {
         }
 
         String ID_number = Utils.getAlphanumeric(8);
-        System.out.println(ID_number);
-
         // get personal image
         String personalPictureFileName = personalPicture.getName();
         String internalPath1 = appDataLocation + "PersonalImages/" + personalPictureFileName;
@@ -131,11 +130,11 @@ public class Controller extends Observable {
         String handSignature = appDataLocation + "HandSignatures/" + personalId.personalImagePath;
         byte[] handSignature_b = Files.readAllBytes(Paths.get(handSignature));
 
+        setChanged();
         if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), publicKey, signature_b)) {
-            System.out.println("Ausweis ist korrekt\n");
-            System.out.println(personalId);
+            notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
         } else {
-            System.out.println("Ausweis ist nicht korrekt\n");
+            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
         }
     }
 
@@ -237,7 +236,8 @@ public class Controller extends Observable {
         if(!validateSignature(
                 Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b),
                 publicKey, signature_b)) {
-            System.err.println("Ausweis ungültig");
+            setChanged();
+            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
             return;
         }
 
@@ -263,11 +263,10 @@ public class Controller extends Observable {
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
-        System.out.println("Ip-Adresse:");
-        System.out.println(InetAddress.getLocalHost().getHostAddress());
+        String ip = InetAddress.getLocalHost().getHostAddress();
         ServerSocket serverSocket = new ServerSocket(0);
-        System.out.println("Portnummer:");
-        System.out.println(serverSocket.getLocalPort());
+        setChanged();
+        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort()));
         Socket s = serverSocket.accept();
         InputStream inputStream = new BufferedInputStream(s.getInputStream());
 
@@ -288,11 +287,12 @@ public class Controller extends Observable {
         fis2.close();
 
         String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
-
+        setChanged();
         if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicKey, signature_b)) {
-            System.out.println(new Personal_ID(personal_id_s, dynamicAttributes));
+            Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+            notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
         } else {
-            System.out.println("Ausweis nicht gültig");
+            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
         }
     }
 

@@ -1,9 +1,13 @@
 package view;
 
 import controller.Controller;
+import utils.OutputEvent;
+
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SignatureException;
@@ -167,6 +171,19 @@ public class TUI implements Observer {
 
     @Override
     public void update(Observable o, Object arg) {
+        OutputEvent e = (OutputEvent) arg;
 
+        if(e instanceof OutputEvent.PersonalIDValidEvent) {
+            System.out.println("Ausweis ist korrekt\n");
+            System.out.println(((OutputEvent.PersonalIDValidEvent) e).personalIDprintout);
+        } else if(e instanceof OutputEvent.PersonalIDInvalidEvent){
+            System.out.println("Ausweis ist nicht korrekt\n");
+        } else if (e instanceof OutputEvent.ServerStartedEvent) {
+            OutputEvent.ServerStartedEvent serverStartedEvent = (OutputEvent.ServerStartedEvent) e;
+            System.out.println("IP-Adresse:");
+            System.out.println(serverStartedEvent.ip);
+            System.out.println("Portnummer:");
+            System.out.println(serverStartedEvent.port);
+        }
     }
 }
