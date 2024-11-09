@@ -1,6 +1,8 @@
 package controller;
 
 import model.Personal_ID;
+import model.PrivateProfile;
+import model.PublicProfile;
 import utils.OutputEvent;
 import utils.Utils;
 import java.io.*;
@@ -29,17 +31,13 @@ public class Controller extends Observable {
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
 
-        File f = Utils.createFileAndSubfolder(appDataLocation + "MyPublicProfiles/" + profileName);
-        FileOutputStream fos = new FileOutputStream(f);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(Utils.stringArrayToLines(dynamicAttributes).getBytes());
-        sliceWriter.write(privateKey.getEncoded());
-        sliceWriter.write(publicKey.getEncoded());
-        fos.close();
+        PrivateProfile privateProfile = new PrivateProfile(
+                profileName, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
+        privateProfile.saveInternal(appDataLocation + "MyPublicProfiles/" + profileName);
     }
 
-    private byte[] sign_id(byte[] personalIdB, byte[] privateKey) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
-        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateKey);
+    private byte[] sign_id(byte[] personalIdB, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
+        PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateProfile.privateKey);
         KeyFactory keyFactory = KeyFactory.getInstance("RSA");
         //sign message
         Signature signature = Signature.getInstance("SHA256withRSA");
@@ -48,14 +46,11 @@ public class Controller extends Observable {
         return signature.sign();
     }
 
-    public void generateID(String publicProfile, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+    public void generateID(String publicProfileName, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         //load public profile
-        FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + publicProfile);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader.next();
-        byte[] privateKey = sliceReader.next();
-        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
-        if(dynamicAttributeValues.length != dynamicAttributes.length) {
+        PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
+                appDataLocation + "MyPublicProfiles/", publicProfileName);
+        if(privateProfile.dynamicAttributes.length != dynamicAttributeValues.length) {
             throw new Exception("Anzahl dynamischer Attribute unpassend");
         }
 
@@ -73,14 +68,14 @@ public class Controller extends Observable {
         imageDir2.mkdirs();
         Files.copy(Paths.get(handSignature.toURI()), Paths.get(internalPath2));
 
-        Personal_ID personalId = new Personal_ID(ID_number, publicProfile, name, surname, date, address,
-                dynamicAttributes, dynamicAttributeValues, personalPictureFileName, handSignatureFileName);
+        Personal_ID personalId = new Personal_ID(ID_number, privateProfile.name, name, surname, date, address,
+                privateProfile.dynamicAttributes, dynamicAttributeValues, personalPictureFileName, handSignatureFileName);
         byte[] personalId_b = personalId.toByte(true);
 
         //Create signature
         byte[] personalId_with_personal_image_b = Utils.concat_bytes(
                 personalId_b, Files.readAllBytes(personalPicture.toPath()), Files.readAllBytes(handSignature.toPath()));
-        byte[] signature_b = sign_id(personalId_with_personal_image_b, privateKey);
+        byte[] signature_b = sign_id(personalId_with_personal_image_b, privateProfile);
 
         String distPath = appDataLocation + "CreatedPersonalIDs/" + ID_number;
 
@@ -116,22 +111,16 @@ public class Controller extends Observable {
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
-        FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
-        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader2.next();
-        byte[] publicKey = sliceReader2.next();
-        fis2.close();
+        PublicProfile publicProfile = PublicProfile.loadInternal(appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
 
-        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
-
-        Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+        Personal_ID personalId = new Personal_ID(personal_id_s, publicProfile.dynamicAttributes);
         String personalImage = appDataLocation + "PersonalImages/" + personalId.personalImagePath;
         byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
         String handSignature = appDataLocation + "HandSignatures/" + personalId.personalImagePath;
         byte[] handSignature_b = Files.readAllBytes(Paths.get(handSignature));
 
         setChanged();
-        if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), publicKey, signature_b)) {
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), publicProfile.publicKey, signature_b)) {
             notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
         } else {
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
@@ -139,35 +128,14 @@ public class Controller extends Observable {
     }
 
     public void exportPublicProfile(String profileName, File destination) throws IOException {
-        FileInputStream fis = new FileInputStream(appDataLocation + "MyPublicProfiles/" + profileName);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader.next();
-        byte[] privateKey_b = sliceReader.next();
-        byte[] publicKey_b = sliceReader.next();
-
-        FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(profileName.getBytes());
-        sliceWriter.write(dynamicAttributes_b);
-        sliceWriter.write(publicKey_b);
+        PrivateProfile privateProfile = PrivateProfile.fromInternalFile(appDataLocation + "MyPublicProfiles/", profileName);
+        PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.dynamicAttributes, privateProfile.publicKey);
+        publicProfile.saveExternal(destination);
     }
 
-    public void importPublicProfile(File publicProfile) throws IOException {
-        FileInputStream fis = new FileInputStream(publicProfile);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
-        String public_profile_name = new String(sliceReader.next());
-        byte[] dynamic_attributes_b = sliceReader.next();
-        byte[] public_profile_b = sliceReader.next();
-        fis.close();
-
-        String internalPath = appDataLocation + "ImportedPublicProfiles/" + public_profile_name;
-        File destination = Utils.createFileAndSubfolder(internalPath);
-
-        FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(dynamic_attributes_b);
-        sliceWriter.write(public_profile_b);
-        fos.close();
+    public void importPublicProfile(File publicProfileFile) throws IOException {
+        PublicProfile publicProfile = PublicProfile.fromExternal(publicProfileFile);
+        publicProfile.saveInternal(appDataLocation + "ImportedPublicProfiles/");
     }
 
     public void exportPersonalID(String personal_id, File destination) throws Exception {
@@ -182,15 +150,9 @@ public class Controller extends Observable {
         fis.close();
 
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
+        PublicProfile publicProfile = PublicProfile.loadInternal(appDataLocation + "MyPublicProfiles/", personal_id_s[1]);
 
-        // load public profile
-        FileInputStream fis2 = new FileInputStream(appDataLocation + "MyPublicProfiles/" + personal_id_s[1]);
-        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader2.next();
-        byte[] publicKey = sliceReader2.next();
-        fis2.close();
-
-        Personal_ID personalId = new Personal_ID(personal_id_s, Utils.bytesToStringArray(dynamicAttributes_b));
+        Personal_ID personalId = new Personal_ID(personal_id_s, publicProfile.dynamicAttributes);
         // load personal image
         byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
         // load hand signature
@@ -218,16 +180,9 @@ public class Controller extends Observable {
         fis.close();
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
-        // load public profile
-        FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
-        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader2.next();
-        byte[] publicKey = sliceReader2.next();
-        fis2.close();
+        PublicProfile publicProfile = PublicProfile.loadInternal(appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
 
-        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
-
-        Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+        Personal_ID personalId = new Personal_ID(personal_id_s, publicProfile.dynamicAttributes);
         // extract id number and image name
         String id_number = personalId.ID_number;
         String imageName = personalId.personalImagePath;
@@ -235,7 +190,7 @@ public class Controller extends Observable {
 
         if(!validateSignature(
                 Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b),
-                publicKey, signature_b)) {
+                publicProfile.publicKey, signature_b)) {
             setChanged();
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
             return;
@@ -279,17 +234,10 @@ public class Controller extends Observable {
         serverSocket.close();
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
-        // load public profile
-        FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
-        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader2.next();
-        byte[] publicKey = sliceReader2.next();
-        fis2.close();
-
-        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
+        PublicProfile publicProfile = PublicProfile.loadInternal(appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
         setChanged();
-        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicKey, signature_b)) {
-            Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicProfile.publicKey, signature_b)) {
+            Personal_ID personalId = new Personal_ID(personal_id_s, publicProfile.dynamicAttributes);
             notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
         } else {
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
@@ -308,15 +256,8 @@ public class Controller extends Observable {
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         // load public profile
-        FileInputStream fis2 = new FileInputStream(appDataLocation + "ImportedPublicProfiles/" + personal_id_s[1]);
-        Utils.SliceReader sliceReader2 = new Utils.SliceReader((data, length) -> fis2.read(data, 0, length));
-        byte[] dynamicAttributes_b = sliceReader2.next();
-        byte[] publicKey = sliceReader2.next();
-        fis2.close();
-
-        String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
-
-        Personal_ID personalId = new Personal_ID(personal_id_s, dynamicAttributes);
+        PublicProfile publicProfile = PublicProfile.loadInternal(appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
+        Personal_ID personalId = new Personal_ID(personal_id_s, publicProfile.dynamicAttributes);
 
         byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
         byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personalId.handSignaturePath));
