@@ -93,7 +93,7 @@ public class TUI implements Observer {
             return;
         }
 
-        controller.generateID(publicProfile, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
+        controller.generateID(controller, publicProfile, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
     }
 
     private void doCheckPersonalID() throws Exception {
@@ -184,6 +184,12 @@ public class TUI implements Observer {
             System.out.println(serverStartedEvent.ip);
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
+        } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent) {
+            System.out.println("Profil: " + ((OutputEvent.NoSuchPublicProfileEvent) e).name + " nicht gespeichert");
+        } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent) {
+            OutputEvent.DynamicAttributesDoesntFitEvent evt = ((OutputEvent.DynamicAttributesDoesntFitEvent) e);
+            System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");
         }
+        System.out.println();
     }
 }
