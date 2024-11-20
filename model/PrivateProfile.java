@@ -8,8 +8,8 @@ import java.io.*;
 
 public class PrivateProfile extends PublicProfile{
     public final byte[] privateKey;
-    public PrivateProfile(String name, String[] dynamicAttributes, byte[] publicKey, byte[] privateKey) {
-        super(name, dynamicAttributes, publicKey);
+    public PrivateProfile(String name, int sequence_number, String[] dynamicAttributes, byte[] publicKey, byte[] privateKey) {
+        super(name, sequence_number, dynamicAttributes, publicKey);
         this.privateKey = privateKey;
     }
 
@@ -23,10 +23,10 @@ public class PrivateProfile extends PublicProfile{
         fos.close();
     }
 
-    public static PrivateProfile fromInternalFile(Controller controller, String path, String profileName) throws IOException {
-        File f = new File(path + profileName);
+    public static PrivateProfile fromInternalFile(Controller controller, String path, String profileName, int sequence_number) throws IOException {
+        File f = new File(path + profileName + "/" + sequence_number);
         if(!f.exists()) {
-            controller.notifyObservers(new OutputEvent.NoSuchPublicProfileEvent(profileName));
+            controller.notifyObservers(new OutputEvent.NoSuchPublicProfileEvent(profileName, sequence_number));
             return null;
         }
         FileInputStream fis = new FileInputStream(f);
@@ -36,6 +36,6 @@ public class PrivateProfile extends PublicProfile{
         byte[] publicKey = sliceReader.next();
         String[] dynamicAttributes = Utils.bytesToStringArray(dynamicAttributes_b);
         fis.close();
-        return new PrivateProfile(profileName, dynamicAttributes, publicKey, privateKey);
+        return new PrivateProfile(profileName, sequence_number, dynamicAttributes, publicKey, privateKey);
     }
 }

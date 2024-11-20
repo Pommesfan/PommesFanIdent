@@ -24,8 +24,10 @@ public interface OutputEvent {
 
     class NoSuchPublicProfileEvent implements OutputEvent{
         public final String name;
-        public NoSuchPublicProfileEvent(String name) {
+        public final int sequence_number;
+        public NoSuchPublicProfileEvent(String name, int sequence_number) {
             this.name = name;
+            this.sequence_number = sequence_number;
         }
     }
 

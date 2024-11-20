@@ -6,12 +6,7 @@ import utils.OutputEvent;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
-import java.security.SignatureException;
-import java.security.spec.InvalidKeySpecException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -50,17 +45,21 @@ public class TUI implements Observer {
     private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException {
         System.out.println("Name für Öffentliches Profil:");
         String name = sc.next();
+        System.out.println("Folgenummer:");
+        int sequenceNumber = sc.nextInt();
         System.out.println("Dynamische Attribute:\nAnzahl eingeben, dann Attribute:");
         String[] dynamicAttributes = new String[sc.nextInt()];
         for (int i = 0; i < dynamicAttributes.length; i++) {
             dynamicAttributes[i] = sc.next();
         }
-        controller.generateKeyPair(name, dynamicAttributes);
+        controller.generateKeyPair(name, sequenceNumber, dynamicAttributes);
     }
 
     private void doGenerateID() throws Exception {
         System.out.println("Öffentliches Profil auswählen");
         String publicProfile = sc.next();
+        System.out.println("Folgenummer Profil:");
+        int sequence_number = sc.nextInt();
         System.out.println("Vorname");
         String name = sc.next();
         System.out.println("Nachname");
@@ -93,7 +92,7 @@ public class TUI implements Observer {
             return;
         }
 
-        controller.generateID(controller, publicProfile, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
+        controller.generateID(controller, publicProfile, sequence_number, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
     }
 
     private void doCheckPersonalID() throws Exception {
@@ -124,17 +123,19 @@ public class TUI implements Observer {
     }
 
     private void doExportPublicProfile() throws IOException {
-        System.out.println("Profilname angeben");
+        System.out.println("Profilname:");
         String profileName = sc.next();
+        System.out.println("Folgenummer Profil:");
+        int sequence_number = sc.nextInt();
         System.out.println("Zielordner wählen!");
         JFileChooser fileChooser = new JFileChooser();
-        fileChooser.setSelectedFile(new File(profileName));
+        fileChooser.setSelectedFile(new File(profileName + "-" + sequence_number));
         fileChooser.showSaveDialog(null);
         File destination = fileChooser.getSelectedFile();
         if(destination == null) {
             return;
         }
-        controller.exportPublicProfile(profileName, destination);
+        controller.exportPublicProfile(profileName, sequence_number, destination);
     }
 
     private void doExportPersonalID() throws Exception {
@@ -185,7 +186,7 @@ public class TUI implements Observer {
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
         } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent) {
-            System.out.println("Profil: " + ((OutputEvent.NoSuchPublicProfileEvent) e).name + " nicht gespeichert");
+            System.out.println("Profil:\nName: " + ((OutputEvent.NoSuchPublicProfileEvent) e).name + "\nFolgenummer: " + ((OutputEvent.NoSuchPublicProfileEvent) e).sequence_number + "\nnicht gespeichert");
         } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent) {
             OutputEvent.DynamicAttributesDoesntFitEvent evt = ((OutputEvent.DynamicAttributesDoesntFitEvent) e);
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");

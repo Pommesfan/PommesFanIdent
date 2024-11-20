@@ -26,7 +26,7 @@ public class Controller extends Observable {
         this.appDataLocation = appDataLocation;
     }
 
-    public void generateKeyPair(String profileName, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
+    public void generateKeyPair(String profileName, int sequence_number, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator gpk = KeyPairGenerator.getInstance("RSA");
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
@@ -34,8 +34,8 @@ public class Controller extends Observable {
         PublicKey publicKey = keyPair.getPublic();
 
         PrivateProfile privateProfile = new PrivateProfile(
-                profileName, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(appDataLocation + "MyPublicProfiles/" + profileName);
+                profileName, sequence_number, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
+        privateProfile.saveInternal(appDataLocation + "MyPublicProfiles/" + profileName + "/" + sequence_number);
     }
 
     private byte[] sign_id(byte[] personalIdB, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
@@ -48,10 +48,10 @@ public class Controller extends Observable {
         return signature.sign();
     }
 
-    public void generateID(Controller controller, String publicProfileName, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+    public void generateID(Controller controller, String publicProfileName, int sequence_number, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + "MyPublicProfiles/", publicProfileName);
+                this, appDataLocation + "MyPublicProfiles/", publicProfileName, sequence_number);
         if(privateProfile == null) {
             return;
         }
@@ -133,10 +133,11 @@ public class Controller extends Observable {
         }
     }
 
-    public void exportPublicProfile(String profileName, File destination) throws IOException {
+    public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + "MyPublicProfiles/", profileName);
-        PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.dynamicAttributes, privateProfile.publicKey);
+                this, appDataLocation + "MyPublicProfiles/", profileName, sequence_number);
+        PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
+                privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination);
     }
 
@@ -189,10 +190,6 @@ public class Controller extends Observable {
         fis.close();
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
-        PublicProfile publicProfile = PublicProfile.loadInternal(this,appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
-        if (publicProfile == null) {
-            return;
-        }
         Personal_ID personalId = Personal_ID.fromString(this, LOAD_PROFILE_FROM_IMPORTED, personal_id_s);
         if (personalId == null) {
             return;
@@ -204,7 +201,7 @@ public class Controller extends Observable {
 
         if(!validateSignature(
                 Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b),
-                publicProfile.publicKey, signature_b)) {
+                personalId.publicProfile.publicKey, signature_b)) {
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
             return;
         }
@@ -246,15 +243,11 @@ public class Controller extends Observable {
         serverSocket.close();
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
-        PublicProfile publicProfile = PublicProfile.loadInternal(this, appDataLocation + "ImportedPublicProfiles/", personal_id_s[1]);
-        if (publicProfile == null) {
+        Personal_ID personalId = Personal_ID.fromString(this, LOAD_PROFILE_FROM_IMPORTED, personal_id_s);
+        if (personalId == null) {
             return;
         }
-        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), publicProfile.publicKey, signature_b)) {
-            Personal_ID personalId = Personal_ID.fromString(this, LOAD_PROFILE_FROM_IMPORTED, personal_id_s);
-            if (personalId == null) {
-                return;
-            }
+        if (validateSignature(Utils.concat_bytes(personal_id_b, personal_image_b, handSignature_b), personalId.publicProfile.publicKey, signature_b)) {
             notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
         } else {
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());

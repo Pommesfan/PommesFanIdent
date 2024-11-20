@@ -2,6 +2,7 @@ package model;
 
 import controller.Controller;
 import utils.OutputEvent;
+import utils.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -41,34 +42,36 @@ public class Personal_ID {
     public static Personal_ID fromString(Controller controller, int own_or_imported_profile, String[] attributes) throws Exception {
         String ID_number = attributes[0];
         PublicProfile publicProfile = null;
+        final String profileName = attributes[1];
+        final int sequence_number = Integer.parseInt(attributes[2]);
         if (own_or_imported_profile == Controller.LOAD_PROFILE_FROM_OWN) {
-            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + "MyPublicProfiles/", attributes[1]);
+            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + "MyPublicProfiles/", profileName, sequence_number);
         } else if(own_or_imported_profile == Controller.LOAD_PROFILE_FROM_IMPORTED) {
-            publicProfile = PublicProfile.loadInternal(controller, controller.appDataLocation + "ImportedPublicProfiles/", attributes[1]);
+            publicProfile = PublicProfile.loadInternal(controller, controller.appDataLocation + "ImportedPublicProfiles/", profileName, sequence_number);
         }
         if(publicProfile == null) {
             return null;
         }
-        String name = attributes[2];
-        String surname = attributes[3];
-        int birthdate_day = Integer.parseInt(attributes[4]);
-        int birthdate_month = Integer.parseInt(attributes[5]);
-        int birthdate_year = Integer.parseInt(attributes[6]);
-        String address = attributes[7];
+        String name = attributes[3];
+        String surname = attributes[4];
+        int birthdate_day = Integer.parseInt(attributes[5]);
+        int birthdate_month = Integer.parseInt(attributes[6]);
+        int birthdate_year = Integer.parseInt(attributes[7]);
+        String address = attributes[8];
 
         int nDynamicAttributes = publicProfile.dynamicAttributes.length;
-        if(attributes.length != 10 + nDynamicAttributes) {
+        if(attributes.length != 11 + nDynamicAttributes) {
             controller.notifyObservers(new OutputEvent.DynamicAttributesDoesntFitEvent(nDynamicAttributes));
             return null;
         }
 
         String[] dynamicAttributesValues = new String[nDynamicAttributes];
         for (int i = 0; i < nDynamicAttributes; i++) {
-            dynamicAttributesValues[i] = attributes[8 + i];
+            dynamicAttributesValues[i] = attributes[9 + i];
         }
 
-        String personalImagePath = attributes[8 + nDynamicAttributes];
-        String handSignaturePath = attributes[9 + nDynamicAttributes];
+        String personalImagePath = attributes[9 + nDynamicAttributes];
+        String handSignaturePath = attributes[10 + nDynamicAttributes];
         Date birtdate = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate_day + "." + birthdate_month + "." + birthdate_year);
         return new Personal_ID(ID_number, publicProfile, name, surname, birtdate, address, dynamicAttributesValues, personalImagePath, handSignaturePath);
     }
@@ -78,6 +81,8 @@ public class Personal_ID {
         baos.write(ID_number.getBytes());
         baos.write('\n');
         baos.write(publicProfile.name.getBytes());
+        baos.write('\n');
+        baos.write(Integer.toString(publicProfile.sequence_number).getBytes());
         baos.write('\n');
         baos.write(name.getBytes());
         baos.write('\n');
@@ -113,6 +118,8 @@ public class Personal_ID {
         sb.append(ID_number);
         sb.append("\nÖffentliches Profil:\n");
         sb.append(publicProfile.name);
+        sb.append("\nÖffentliches Profil Folgenummer:\n");
+        sb.append(publicProfile.sequence_number);
         sb.append("\nVorname:\n");
         sb.append(name);
         sb.append("\nNachname:\n");
