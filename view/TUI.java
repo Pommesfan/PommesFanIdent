@@ -186,7 +186,8 @@ public class TUI implements Observer {
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
         } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent) {
-            System.out.println("Profil:\nName: " + ((OutputEvent.NoSuchPublicProfileEvent) e).name + "\nFolgenummer: " + ((OutputEvent.NoSuchPublicProfileEvent) e).sequence_number + "\nnicht gespeichert");
+            OutputEvent.NoSuchPublicProfileEvent evt = (OutputEvent.NoSuchPublicProfileEvent) e;
+            System.out.println("Profil:\nName: " + evt.name + "\nFolgenummer: " + evt.sequence_number + "\nnicht gespeichert");
         } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent) {
             OutputEvent.DynamicAttributesDoesntFitEvent evt = ((OutputEvent.DynamicAttributesDoesntFitEvent) e);
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");

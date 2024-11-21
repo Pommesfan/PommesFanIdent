@@ -21,13 +21,21 @@ import java.util.Observable;
 public class Controller extends Observable {
     public static final int LOAD_PROFILE_FROM_OWN = 1;
     public static final int LOAD_PROFILE_FROM_IMPORTED = 2;
+    public static final String strMyPublicProfiles = "MyPublicProfiles/";
+    public static final String strImportedPublicProfiles = "ImportedPublicProfiles/";
+    public static final String strPersonalImages = "PersonalImages/";
+    public static final String strHandSignatures = "HandSignatures/";
+    public static final String strCreatedPersonalIDs = "CreatedPersonalIDs/";
+    public static final String strImportedPersonalIDs = "ImportedPersonalIDs/";
+    public static final String encryptionAlgorithm = "RSA";
+    public static final String hashAllgorithm = "SHA256withRSA";
     public final String appDataLocation;
     public Controller(String appDataLocation) {
         this.appDataLocation = appDataLocation;
     }
 
     public void generateKeyPair(String profileName, int sequence_number, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
-        KeyPairGenerator gpk = KeyPairGenerator.getInstance("RSA");
+        KeyPairGenerator gpk = KeyPairGenerator.getInstance(encryptionAlgorithm);
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
@@ -35,14 +43,14 @@ public class Controller extends Observable {
 
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(appDataLocation + "MyPublicProfiles/" + profileName + "/" + sequence_number);
+        privateProfile.saveInternal(appDataLocation + strMyPublicProfiles + profileName + "/" + sequence_number);
     }
 
     private byte[] sign_id(byte[] personalIdB, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
         PKCS8EncodedKeySpec spec = new PKCS8EncodedKeySpec(privateProfile.privateKey);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        KeyFactory keyFactory = KeyFactory.getInstance(encryptionAlgorithm);
         //sign message
-        Signature signature = Signature.getInstance("SHA256withRSA");
+        Signature signature = Signature.getInstance(hashAllgorithm);
         signature.initSign(keyFactory.generatePrivate(spec));
         signature.update(personalIdB);
         return signature.sign();
@@ -51,7 +59,7 @@ public class Controller extends Observable {
     public void generateID(Controller controller, String publicProfileName, int sequence_number, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + "MyPublicProfiles/", publicProfileName, sequence_number);
+                this, appDataLocation + strMyPublicProfiles, publicProfileName, sequence_number);
         if(privateProfile == null) {
             return;
         }
@@ -64,14 +72,14 @@ public class Controller extends Observable {
         String ID_number = Utils.getAlphanumeric(8);
         // get personal image
         String personalPictureFileName = personalPicture.getName();
-        String internalPath1 = appDataLocation + "PersonalImages/" + personalPictureFileName;
-        File imageDir1 = new File(appDataLocation + "PersonalImages/");
+        String internalPath1 = appDataLocation + strPersonalImages + personalPictureFileName;
+        File imageDir1 = new File(appDataLocation + strPersonalImages);
         imageDir1.mkdirs();
         Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath1));
         // get hand signature
         String handSignatureFileName = personalPicture.getName();
-        String internalPath2 = appDataLocation + "HandSignatures/" + personalPictureFileName;
-        File imageDir2 = new File(appDataLocation + "HandSignatures/");
+        String internalPath2 = appDataLocation + strHandSignatures + personalPictureFileName;
+        File imageDir2 = new File(appDataLocation + strHandSignatures);
         imageDir2.mkdirs();
         Files.copy(Paths.get(handSignature.toURI()), Paths.get(internalPath2));
 
@@ -84,7 +92,7 @@ public class Controller extends Observable {
                 personalId_b, Files.readAllBytes(personalPicture.toPath()), Files.readAllBytes(handSignature.toPath()));
         byte[] signature_b = sign_id(personalId_with_personal_image_b, privateProfile);
 
-        String distPath = appDataLocation + "CreatedPersonalIDs/" + ID_number;
+        String distPath = appDataLocation + strCreatedPersonalIDs + ID_number;
 
         //Save ID
         File f = Utils.createFileAndSubfolder(distPath);
@@ -95,18 +103,18 @@ public class Controller extends Observable {
         fos.close();
     }
 
-    private boolean validateSignature(byte[] personal_id_b, byte[] publicKey, byte[] signature_b) throws IOException, NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
+    private boolean validateSignature(byte[] personal_id_b, byte[] publicKey, byte[] signature_b) throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException {
         X509EncodedKeySpec spec = new X509EncodedKeySpec(publicKey);
-        KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+        KeyFactory keyFactory = KeyFactory.getInstance(encryptionAlgorithm);
 
-        Signature publicSignature = Signature.getInstance("SHA256withRSA");
+        Signature publicSignature = Signature.getInstance(hashAllgorithm);
         publicSignature.initVerify(keyFactory.generatePublic(spec));
         publicSignature.update(personal_id_b);
         return publicSignature.verify(signature_b);
     }
 
     public void checkPersonalID(String id_number) throws Exception {
-        String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
+        String distPath = appDataLocation + strImportedPersonalIDs + id_number.toUpperCase();
 
         //load personal id
         File f = new File(distPath);
@@ -121,9 +129,9 @@ public class Controller extends Observable {
         if(personalId == null) {
             return;
         }
-        String personalImage = appDataLocation + "PersonalImages/" + personalId.personalImagePath;
+        String personalImage = appDataLocation + strPersonalImages + personalId.personalImagePath;
         byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
-        String handSignature = appDataLocation + "HandSignatures/" + personalId.personalImagePath;
+        String handSignature = appDataLocation + strHandSignatures + personalId.personalImagePath;
         byte[] handSignature_b = Files.readAllBytes(Paths.get(handSignature));
 
         if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), personalId.publicProfile.publicKey, signature_b)) {
@@ -135,7 +143,7 @@ public class Controller extends Observable {
 
     public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + "MyPublicProfiles/", profileName, sequence_number);
+                this, appDataLocation + strMyPublicProfiles, profileName, sequence_number);
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination);
@@ -143,11 +151,11 @@ public class Controller extends Observable {
 
     public void importPublicProfile(File publicProfileFile) throws IOException {
         PublicProfile publicProfile = PublicProfile.fromExternal(publicProfileFile);
-        publicProfile.saveInternal(appDataLocation + "ImportedPublicProfiles/");
+        publicProfile.saveInternal(appDataLocation + strImportedPublicProfiles);
     }
 
     public void exportPersonalID(String personal_id, File destination) throws Exception {
-        String distPath = appDataLocation + "CreatedPersonalIDs/" + personal_id.toUpperCase();
+        String distPath = appDataLocation + strCreatedPersonalIDs + personal_id.toUpperCase();
 
         //load personal id
         File f = new File(distPath);
@@ -164,9 +172,9 @@ public class Controller extends Observable {
             return;
         }
         // load personal image
-        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + strPersonalImages + personalId.personalImagePath));
         // load hand signature
-        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personalId.handSignaturePath));
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + strHandSignatures + personalId.handSignaturePath));
 
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
@@ -207,7 +215,7 @@ public class Controller extends Observable {
         }
 
         // save imported data
-        String id_path = appDataLocation +  "ImportedPersonalIDs/" + id_number;
+        String id_path = appDataLocation + strImportedPersonalIDs + id_number;
         File f_personal_id = Utils.createFileAndSubfolder(id_path);
         FileOutputStream fos1 = new FileOutputStream(f_personal_id);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos1.write(data));
@@ -216,12 +224,12 @@ public class Controller extends Observable {
         fos1.close();
 
 
-        File f_personal_image = Utils.createFileAndSubfolder(appDataLocation + "PersonalImages/" + imageName);
+        File f_personal_image = Utils.createFileAndSubfolder(appDataLocation + strPersonalImages + imageName);
         FileOutputStream fos2 = new FileOutputStream(f_personal_image);
         fos2.write(personalImage_b);
         fos2.close();
 
-        File f_hand_signature = Utils.createFileAndSubfolder(appDataLocation + "HandSignatures/" + handSignatureName);
+        File f_hand_signature = Utils.createFileAndSubfolder(appDataLocation + strHandSignatures + handSignatureName);
         FileOutputStream fos3 = new FileOutputStream(f_hand_signature);
         fos3.write(handSignature_b);
         fos3.close();
@@ -257,7 +265,7 @@ public class Controller extends Observable {
     public void handInPersonalIDtoRemote(String id_number, String ip, int port) throws Exception {
         Socket s = new Socket(ip, port);
         //load personal id
-        String distPath = appDataLocation + "ImportedPersonalIDs/" + id_number.toUpperCase();
+        String distPath = appDataLocation + strImportedPersonalIDs + id_number.toUpperCase();
         FileInputStream fis = new FileInputStream(distPath);
         Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
         byte[] personal_id_b = sliceReader.next();
@@ -269,8 +277,8 @@ public class Controller extends Observable {
         if (personalId == null) {
             return;
         }
-        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + "PersonalImages/" + personalId.personalImagePath));
-        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + "HandSignatures/" + personalId.handSignaturePath));
+        byte[] personalImage_b = Files.readAllBytes(Paths.get(appDataLocation + strPersonalImages + personalId.personalImagePath));
+        byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + strHandSignatures + personalId.handSignaturePath));
         fis.close();
         OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
 
