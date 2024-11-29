@@ -2,9 +2,7 @@ package utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
-import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Date;
 import java.util.Random;
 
 public class Utils {
@@ -86,9 +84,15 @@ public class Utils {
         int[]daysOfMonth = new int[]{31,28,31,30,31,30,31,31,30,31,30,31};
         if(y % 4 == 0 && m == 2 && d == 29)
             return true;
-        else if (d > daysOfMonth[m - 1])
-            return false;
-        return true;
+        else return d <= daysOfMonth[m - 1];
+    }
+
+    public static String[] sliceStringArray(String[] s, int start, int end) {
+        String[] res = new String[end - start];
+        for (int i = 0; i < res.length; i++) {
+            res[i] = s[i + start];
+        }
+        return res;
     }
 
     public static class SliceReader {

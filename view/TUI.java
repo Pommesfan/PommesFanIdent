@@ -1,6 +1,7 @@
 package view;
 
 import controller.Controller;
+import model.PublicProfile;
 import utils.OutputEvent;
 
 import javax.swing.*;
@@ -52,7 +53,16 @@ public class TUI implements Observer {
         for (int i = 0; i < dynamicAttributes.length; i++) {
             dynamicAttributes[i] = sc.next();
         }
-        controller.generateKeyPair(name, sequenceNumber, dynamicAttributes);
+        System.out.println("Datum gültig ab:");
+        String validFrom = sc.next();
+        System.out.println("Datum gültig bis für Erstellung:");
+        String validUntilForCreation = sc.next();
+        System.out.println("Datum gültig bis für Erstellte:");
+        String validUntilForCreated = sc.next();
+        System.out.println("Tage für maximale Gültigkeit:");
+        int maxValidDays = sc.nextInt();
+        PublicProfile.ValidityPeriod validityPeriod = new PublicProfile.ValidityPeriod(validFrom, validUntilForCreation, validUntilForCreated, maxValidDays);
+        controller.generateKeyPair(name, sequenceNumber, validityPeriod, dynamicAttributes);
     }
 
     private void doGenerateID() throws Exception {

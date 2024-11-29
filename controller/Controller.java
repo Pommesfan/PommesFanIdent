@@ -34,15 +34,16 @@ public class Controller extends Observable {
         this.appDataLocation = appDataLocation;
     }
 
-    public void generateKeyPair(String profileName, int sequence_number, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
+    public void generateKeyPair(String profileName, int sequence_number, PublicProfile.ValidityPeriod validityPeriod, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
         KeyPairGenerator gpk = KeyPairGenerator.getInstance(encryptionAlgorithm);
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
+        String created = Utils.today();
 
         PrivateProfile privateProfile = new PrivateProfile(
-                profileName, sequence_number, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
+                profileName, sequence_number, created, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
         privateProfile.saveInternal(appDataLocation + strMyPublicProfiles + profileName + "/" + sequence_number);
     }
 
@@ -145,7 +146,7 @@ public class Controller extends Observable {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strMyPublicProfiles, profileName, sequence_number);
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
-                privateProfile.dynamicAttributes, privateProfile.publicKey);
+                privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination);
     }
 
