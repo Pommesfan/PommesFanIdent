@@ -2,6 +2,9 @@ package utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
+import java.time.LocalDate;
+import java.util.Date;
 import java.util.Random;
 
 public class Utils {
@@ -59,6 +62,33 @@ public class Utils {
         } else {
             return new String(data).split("\n");
         }
+    }
+
+    public static String today() {
+        LocalDate localDate = LocalDate.now();
+        return localDate.getDayOfMonth() + "." + localDate.getMonthValue() + "." + localDate.getYear();
+    }
+
+    public static boolean validateStringDate(String date) {
+        String[]s = date.split("\\.");
+        if(s.length != 3)
+            return false;
+        int d;
+        int m;
+        int y;
+        try {
+            d = Integer.parseInt(s[0]);
+            m = Integer.parseInt(s[1]);
+            y = Integer.parseInt(s[2]);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        int[]daysOfMonth = new int[]{31,28,31,30,31,30,31,31,30,31,30,31};
+        if(y % 4 == 0 && m == 2 && d == 29)
+            return true;
+        else if (d > daysOfMonth[m - 1])
+            return false;
+        return true;
     }
 
     public static class SliceReader {
