@@ -3,12 +3,10 @@ package view;
 import controller.Controller;
 import model.PublicProfile;
 import utils.OutputEvent;
-
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
-import java.text.SimpleDateFormat;
 import java.util.*;
 
 public class TUI implements Observer {
@@ -70,13 +68,14 @@ public class TUI implements Observer {
         String publicProfile = sc.next();
         System.out.println("Folgenummer Profil:");
         int sequence_number = sc.nextInt();
+        System.out.println("Gültig bis:");
+        String valid_until = sc.next();
         System.out.println("Vorname");
         String name = sc.next();
         System.out.println("Nachname");
         String surname = sc.next();
         System.out.println("Geburtsdatum");
         String birthdate = sc.next();
-        Date date = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate);
         System.out.println("Adresse");
         String address = sc.next();
         System.out.println("Dynamische Attribute:\nAnzahl eingeben, dann Attribute");
@@ -102,7 +101,7 @@ public class TUI implements Observer {
             return;
         }
 
-        controller.generateID(controller, publicProfile, sequence_number, name, surname, date, address, dynamicAttributeValues, personalPicture, handSignature);
+        controller.generateID(controller, publicProfile, sequence_number, valid_until, name, surname, birthdate, address, dynamicAttributeValues, personalPicture, handSignature);
     }
 
     private void doCheckPersonalID() throws Exception {

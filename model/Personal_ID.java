@@ -2,35 +2,33 @@ package model;
 
 import controller.Controller;
 import utils.OutputEvent;
+import utils.Utils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
-import java.util.*;
 
 public class Personal_ID {
     public final String ID_number;
     public final PublicProfile publicProfile;
+    public final String created;
+    public final String validUntil;
     public final String name;
     public final String surname;
-    public final int birthdate_day;
-    public final int birthdate_month;
-    public final int birthdate_year;
+    public final String birthdate;
     public final String address;
     public final String[] dynamicAttributesValues;
     public final String personalImagePath;
     public final String handSignaturePath;
 
-    public Personal_ID(String pIDnumber, PublicProfile pPublicProfile, String pName, String pSurname, Date pBirthDate,
+    public Personal_ID(String pIDnumber, PublicProfile pPublicProfile, String pCreated, String pValidUntil, String pName, String pSurname, String pBirthDate,
                        String pAddress, String[] pDynamicAttributesValues, String pPersonalImagePath, String pHandSignaturePath) {
-        Calendar calendar = new GregorianCalendar();
-        calendar.setTime(pBirthDate);
         ID_number = pIDnumber;
         publicProfile = pPublicProfile;
+        created = pCreated;
+        validUntil = pValidUntil;
         name = pName;
         surname = pSurname;
-        birthdate_day = calendar.get(Calendar.DAY_OF_MONTH);
-        birthdate_month = calendar.get(Calendar.MONTH) + 1;
-        birthdate_year = calendar.get(Calendar.YEAR);
+        birthdate = pBirthDate;
         address = pAddress;
         dynamicAttributesValues = pDynamicAttributesValues;
         personalImagePath = pPersonalImagePath;
@@ -50,11 +48,11 @@ public class Personal_ID {
         if(publicProfile == null) {
             return null;
         }
-        String name = attributes[3];
-        String surname = attributes[4];
-        int birthdate_day = Integer.parseInt(attributes[5]);
-        int birthdate_month = Integer.parseInt(attributes[6]);
-        int birthdate_year = Integer.parseInt(attributes[7]);
+        String created = attributes[3];
+        String validUntil = attributes[4];
+        String name = attributes[5];
+        String surname = attributes[6];
+        String birthdate = attributes[7];
         String address = attributes[8];
 
         int nDynamicAttributes = publicProfile.dynamicAttributes.length;
@@ -63,15 +61,11 @@ public class Personal_ID {
             return null;
         }
 
-        String[] dynamicAttributesValues = new String[nDynamicAttributes];
-        for (int i = 0; i < nDynamicAttributes; i++) {
-            dynamicAttributesValues[i] = attributes[9 + i];
-        }
+        String[] dynamicAttributesValues = Utils.sliceStringArray(attributes, 9, 9 + nDynamicAttributes);
 
         String personalImagePath = attributes[9 + nDynamicAttributes];
         String handSignaturePath = attributes[10 + nDynamicAttributes];
-        Date birtdate = new SimpleDateFormat("dd.MM.yyyy").parse(birthdate_day + "." + birthdate_month + "." + birthdate_year);
-        return new Personal_ID(ID_number, publicProfile, name, surname, birtdate, address, dynamicAttributesValues, personalImagePath, handSignaturePath);
+        return new Personal_ID(ID_number, publicProfile, created, validUntil, name, surname, birthdate, address, dynamicAttributesValues, personalImagePath, handSignaturePath);
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {
@@ -82,15 +76,15 @@ public class Personal_ID {
         baos.write('\n');
         baos.write(Integer.toString(publicProfile.sequence_number).getBytes());
         baos.write('\n');
+        baos.write(created.getBytes());
+        baos.write('\n');
+        baos.write(validUntil.getBytes());
+        baos.write('\n');
         baos.write(name.getBytes());
         baos.write('\n');
         baos.write(surname.getBytes());
         baos.write('\n');
-        baos.write(Integer.toString(birthdate_day).getBytes());
-        baos.write('\n');
-        baos.write(Integer.toString(birthdate_month).getBytes());
-        baos.write('\n');
-        baos.write(Integer.toString(birthdate_year).getBytes());
+        baos.write(birthdate.getBytes());
         baos.write('\n');
         baos.write(address.getBytes());
         baos.write('\n');
@@ -118,16 +112,16 @@ public class Personal_ID {
         sb.append(publicProfile.name);
         sb.append("\nÖffentliches Profil Folgenummer:\n");
         sb.append(publicProfile.sequence_number);
+        sb.append("\nErstellt:\n");
+        sb.append(created);
+        sb.append("\nGültig bis:\n");
+        sb.append(validUntil);
         sb.append("\nVorname:\n");
         sb.append(name);
         sb.append("\nNachname:\n");
         sb.append(surname);
         sb.append("\nGeburtsdatum\n");
-        sb.append(birthdate_day);
-        sb.append(".");
-        sb.append(birthdate_month);
-        sb.append(".");
-        sb.append(birthdate_year);
+        sb.append(birthdate);
         sb.append("\nAdresse:\n");
         sb.append(address);
 

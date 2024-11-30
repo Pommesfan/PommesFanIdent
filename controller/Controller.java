@@ -15,7 +15,6 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
-import java.util.Date;
 import java.util.Observable;
 
 public class Controller extends Observable {
@@ -57,7 +56,7 @@ public class Controller extends Observable {
         return signature.sign();
     }
 
-    public void generateID(Controller controller, String publicProfileName, int sequence_number, String name, String surname, Date date, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+    public void generateID(Controller controller, String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strMyPublicProfiles, publicProfileName, sequence_number);
@@ -78,14 +77,15 @@ public class Controller extends Observable {
         imageDir1.mkdirs();
         Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath1));
         // get hand signature
-        String handSignatureFileName = personalPicture.getName();
-        String internalPath2 = appDataLocation + strHandSignatures + personalPictureFileName;
+        String handSignatureFileName = handSignature.getName();
+        String internalPath2 = appDataLocation + strHandSignatures + handSignatureFileName;
         File imageDir2 = new File(appDataLocation + strHandSignatures);
         imageDir2.mkdirs();
         Files.copy(Paths.get(handSignature.toURI()), Paths.get(internalPath2));
 
-        Personal_ID personalId = new Personal_ID(ID_number, privateProfile, name, surname, date, address,
-                dynamicAttributeValues, personalPictureFileName, handSignatureFileName);
+        String today = Utils.today();
+        Personal_ID personalId = new Personal_ID(ID_number, privateProfile, today, validUntil, name, surname, birthdate,
+                address, dynamicAttributeValues, personalPictureFileName, handSignatureFileName);
         byte[] personalId_b = personalId.toByte(true);
 
         //Create signature
@@ -132,7 +132,7 @@ public class Controller extends Observable {
         }
         String personalImage = appDataLocation + strPersonalImages + personalId.personalImagePath;
         byte[] personalImage_b = Files.readAllBytes(Paths.get(personalImage));
-        String handSignature = appDataLocation + strHandSignatures + personalId.personalImagePath;
+        String handSignature = appDataLocation + strHandSignatures + personalId.handSignaturePath;
         byte[] handSignature_b = Files.readAllBytes(Paths.get(handSignature));
 
         if (validateSignature(Utils.concat_bytes(personal_id_b, personalImage_b, handSignature_b), personalId.publicProfile.publicKey, signature_b)) {

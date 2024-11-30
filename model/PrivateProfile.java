@@ -3,7 +3,6 @@ package model;
 import controller.Controller;
 import utils.OutputEvent;
 import utils.Utils;
-
 import java.io.*;
 
 public class PrivateProfile extends PublicProfile{
