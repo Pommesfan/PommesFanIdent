@@ -3,7 +3,6 @@ package model;
 import controller.Controller;
 import utils.OutputEvent;
 import utils.Utils;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 
@@ -41,7 +40,7 @@ public class Personal_ID {
         final String profileName = attributes[1];
         final int sequence_number = Integer.parseInt(attributes[2]);
         if (own_or_imported_profile == Controller.LOAD_PROFILE_FROM_OWN) {
-            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + Controller.strMyPublicProfiles, profileName, sequence_number);
+            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + Controller.strCreatedProfiles, profileName, sequence_number);
         } else if(own_or_imported_profile == Controller.LOAD_PROFILE_FROM_IMPORTED) {
             publicProfile = PublicProfile.loadInternal(controller, controller.appDataLocation + Controller.strImportedPublicProfiles, profileName, sequence_number);
         }

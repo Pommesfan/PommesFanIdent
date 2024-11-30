@@ -20,7 +20,7 @@ import java.util.Observable;
 public class Controller extends Observable {
     public static final int LOAD_PROFILE_FROM_OWN = 1;
     public static final int LOAD_PROFILE_FROM_IMPORTED = 2;
-    public static final String strMyPublicProfiles = "MyPublicProfiles/";
+    public static final String strCreatedProfiles = "CreatedProfiles/";
     public static final String strImportedPublicProfiles = "ImportedPublicProfiles/";
     public static final String strPersonalImages = "PersonalImages/";
     public static final String strHandSignatures = "HandSignatures/";
@@ -43,7 +43,7 @@ public class Controller extends Observable {
 
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, created, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(appDataLocation + strMyPublicProfiles + profileName + "/" + sequence_number);
+        privateProfile.saveInternal(appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
     }
 
     private byte[] sign_id(byte[] personalIdB, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException {
@@ -59,7 +59,7 @@ public class Controller extends Observable {
     public void generateID(Controller controller, String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strMyPublicProfiles, publicProfileName, sequence_number);
+                this, appDataLocation + strCreatedProfiles, publicProfileName, sequence_number);
         if(privateProfile == null) {
             return;
         }
@@ -144,7 +144,7 @@ public class Controller extends Observable {
 
     public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strMyPublicProfiles, profileName, sequence_number);
+                this, appDataLocation + strCreatedProfiles, profileName, sequence_number);
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination);
