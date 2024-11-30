@@ -95,6 +95,27 @@ public class Utils {
         return res;
     }
 
+    public static class LineWriter {
+        public final ByteArrayOutputStream baos;
+        public LineWriter() {
+            baos = new ByteArrayOutputStream();
+        }
+
+        public void write(String s) throws IOException {
+            baos.write(s.getBytes());
+            baos.write('\n');
+        }
+
+        public byte[] get_bytes() throws IOException {
+            baos.close();
+            return baos.toByteArray();
+        }
+
+        public void write_byte(byte[] b) throws IOException {
+            baos.write(b);
+        }
+    }
+
     public static class SliceReader {
         private final Readable readable;
         public SliceReader(Readable readable) {

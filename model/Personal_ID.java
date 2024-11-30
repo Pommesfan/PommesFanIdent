@@ -68,38 +68,26 @@ public class Personal_ID {
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(ID_number.getBytes());
-        baos.write('\n');
-        baos.write(publicProfile.name.getBytes());
-        baos.write('\n');
-        baos.write(Integer.toString(publicProfile.sequence_number).getBytes());
-        baos.write('\n');
-        baos.write(created.getBytes());
-        baos.write('\n');
-        baos.write(validUntil.getBytes());
-        baos.write('\n');
-        baos.write(name.getBytes());
-        baos.write('\n');
-        baos.write(surname.getBytes());
-        baos.write('\n');
-        baos.write(birthdate.getBytes());
-        baos.write('\n');
-        baos.write(address.getBytes());
-        baos.write('\n');
+        Utils.LineWriter lineWriter = new Utils.LineWriter();
+        lineWriter.write(ID_number);
+        lineWriter.write(publicProfile.name);
+        lineWriter.write(Integer.toString(publicProfile.sequence_number));
+        lineWriter.write(created);
+        lineWriter.write(validUntil);
+        lineWriter.write(name);
+        lineWriter.write(surname);
+        lineWriter.write(birthdate);
+        lineWriter.write(address);
 
         for (String attribute : dynamicAttributesValues) {
-            baos.write(attribute.getBytes());
-            baos.write('\n');
+            lineWriter.write(attribute);
         }
 
         if(withPaths) {
-            baos.write(personalImagePath.getBytes());
-            baos.write('\n');
-            baos.write(handSignaturePath.getBytes());
-            baos.write('\n');
+            lineWriter.write(personalImagePath);
+            lineWriter.write(handSignaturePath);
         }
-        return baos.toByteArray();
+        return lineWriter.get_bytes();
     }
 
     @Override

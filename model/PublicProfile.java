@@ -88,18 +88,15 @@ public class PublicProfile {
     }
 
     public byte[] toByteArray(boolean addNameAndSequence) throws IOException {
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        Utils.LineWriter lineWriter = new Utils.LineWriter();
         if(addNameAndSequence) {
-            baos.write(name.getBytes());
-            baos.write('\n');
-            baos.write(String.valueOf(sequence_number).getBytes());
-            baos.write('\n');
+            lineWriter.write(name);
+            lineWriter.write(String.valueOf(sequence_number));
         }
-        baos.write(created.getBytes());
-        baos.write('\n');
-        baos.write(validityPeriod.toByteArray());
-        baos.write(Utils.stringArrayToLines(dynamicAttributes).getBytes());
-        return baos.toByteArray();
+        lineWriter.write(created);
+        lineWriter.write_byte(validityPeriod.toByteArray());
+        lineWriter.write(Utils.stringArrayToLines(dynamicAttributes));
+        return lineWriter.get_bytes();
     }
 
     public static class ValidityPeriod {
@@ -130,16 +127,12 @@ public class PublicProfile {
         }
 
         public byte[] toByteArray() throws IOException {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            baos.write(validFrom.getBytes());
-            baos.write('\n');
-            baos.write(validUntilForCreation.getBytes());
-            baos.write('\n');
-            baos.write(validUntilForCreated.getBytes());
-            baos.write('\n');
-            baos.write(String.valueOf(maxValidDays).getBytes());
-            baos.write('\n');
-            return baos.toByteArray();
+            Utils.LineWriter lineWriter = new Utils.LineWriter();
+            lineWriter.write(validFrom);
+            lineWriter.write(validUntilForCreation);
+            lineWriter.write(validUntilForCreated);
+            lineWriter.write(String.valueOf(maxValidDays));
+            return lineWriter.get_bytes();
         }
 
         public static ValidityPeriod fromStringArray(String[]s, int start) {
