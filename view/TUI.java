@@ -175,8 +175,12 @@ public class TUI implements Observer {
         controller.handInPersonalIDtoRemote(id_number, ip, port);
     }
 
-    private void doShowPublicProfile() {
-
+    private void doShowPublicProfile() throws IOException {
+        System.out.println("Profilname:");
+        String profile_name = sc.next();
+        System.out.println("Folgenummer Profil:");
+        int sequence = sc.nextInt();
+        controller.showPublicProfile(profile_name, sequence);
     }
 
     @Override
@@ -200,6 +204,8 @@ public class TUI implements Observer {
         } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent) {
             OutputEvent.DynamicAttributesDoesntFitEvent evt = ((OutputEvent.DynamicAttributesDoesntFitEvent) e);
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");
+        } else if (e instanceof OutputEvent.ShowProfileEvent) {
+            System.out.println(((OutputEvent.ShowProfileEvent) e).msg);
         }
         System.out.println();
     }

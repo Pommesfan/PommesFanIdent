@@ -58,7 +58,7 @@ public class PublicProfile {
     public void saveExternal(File destination) throws IOException {
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(profileToString(true).getBytes());
+        sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
     }
 
@@ -66,24 +66,40 @@ public class PublicProfile {
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(profileToString(false).getBytes());
+        sliceWriter.write(toByteArray(false));
         sliceWriter.write(publicKey);
         fos.close();
     }
 
-    public String profileToString(boolean addNameAndSequence) {
+    @Override
+    public String toString() {
         StringBuilder sb = new StringBuilder();
-        if(addNameAndSequence) {
-            sb.append(name);
-            sb.append('\n');
-            sb.append(sequence_number);
-            sb.append('\n');
-        }
+        sb.append("Profilname:\n");
+        sb.append(name);
+        sb.append("\nFolgenummer:\n");
+        sb.append(sequence_number);
+        sb.append("\nErstellt\n");
         sb.append(created);
         sb.append('\n');
         sb.append(validityPeriod);
+        sb.append("Dynamische Attribute:\n");
         sb.append(Utils.stringArrayToLines(dynamicAttributes));
         return sb.toString();
+    }
+
+    public byte[] toByteArray(boolean addNameAndSequence) throws IOException {
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        if(addNameAndSequence) {
+            baos.write(name.getBytes());
+            baos.write('\n');
+            baos.write(String.valueOf(sequence_number).getBytes());
+            baos.write('\n');
+        }
+        baos.write(created.getBytes());
+        baos.write('\n');
+        baos.write(validityPeriod.toByteArray());
+        baos.write(Utils.stringArrayToLines(dynamicAttributes).getBytes());
+        return baos.toByteArray();
     }
 
     public static class ValidityPeriod {
@@ -101,15 +117,29 @@ public class PublicProfile {
         @Override
         public String toString() {
             StringBuilder sb = new StringBuilder();
+            sb.append("Gültig ab:\n");
             sb.append(validFrom);
-            sb.append('\n');
+            sb.append("\nGültig bis, bezüglich Erstellung:\n");
             sb.append(validUntilForCreation);
-            sb.append('\n');
+            sb.append("\nGültig bis, bezüglich Gültigkeit erstellter Ausweise:\n");
             sb.append(validUntilForCreated);
-            sb.append('\n');
+            sb.append("\nMaximale Gültigkeit Tage:\n");
             sb.append(maxValidDays);
             sb.append('\n');
             return sb.toString();
+        }
+
+        public byte[] toByteArray() throws IOException {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            baos.write(validFrom.getBytes());
+            baos.write('\n');
+            baos.write(validUntilForCreation.getBytes());
+            baos.write('\n');
+            baos.write(validUntilForCreated.getBytes());
+            baos.write('\n');
+            baos.write(String.valueOf(maxValidDays).getBytes());
+            baos.write('\n');
+            return baos.toByteArray();
         }
 
         public static ValidityPeriod fromStringArray(String[]s, int start) {

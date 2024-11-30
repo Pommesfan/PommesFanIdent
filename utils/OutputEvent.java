@@ -37,4 +37,11 @@ public interface OutputEvent {
             this.nDynamicAttributes = nDynamicAttributes;
         }
     }
+
+    class ShowProfileEvent implements OutputEvent{
+        public final String msg;
+        public ShowProfileEvent(String msg) {
+            this.msg = msg;
+        }
+    }
 }

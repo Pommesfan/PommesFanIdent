@@ -16,7 +16,7 @@ public class PrivateProfile extends PublicProfile{
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
-        sliceWriter.write(profileToString(false).getBytes());
+        sliceWriter.write(toByteArray(false));
         sliceWriter.write(privateKey);
         sliceWriter.write(publicKey);
         fos.close();

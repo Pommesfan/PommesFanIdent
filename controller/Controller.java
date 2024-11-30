@@ -292,6 +292,14 @@ public class Controller extends Observable {
         outputStream.close();
     }
 
+    public void showPublicProfile(String profileName, int sequence) throws IOException {
+        PublicProfile profile = PublicProfile.loadInternal(this, appDataLocation + Controller.strImportedPublicProfiles, profileName, sequence);
+        if(profile == null) {
+            return;
+        }
+        notifyObservers(new OutputEvent.ShowProfileEvent(profile.toString()));
+    }
+
     @Override
     public void notifyObservers(Object o) {
         setChanged();
