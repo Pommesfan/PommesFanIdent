@@ -71,21 +71,13 @@ public class Controller extends Observable {
 
         String ID_number = Utils.getAlphanumeric(8);
         // get personal image
-        String personalPictureFileName = personalPicture.getName();
-        String internalPath1 = appDataLocation + strPersonalImages + personalPictureFileName;
-        File imageDir1 = new File(appDataLocation + strPersonalImages);
-        imageDir1.mkdirs();
-        Files.copy(Paths.get(personalPicture.toURI()), Paths.get(internalPath1));
+        copy_attached_data(personalPicture, strPersonalImages);
         // get hand signature
-        String handSignatureFileName = handSignature.getName();
-        String internalPath2 = appDataLocation + strHandSignatures + handSignatureFileName;
-        File imageDir2 = new File(appDataLocation + strHandSignatures);
-        imageDir2.mkdirs();
-        Files.copy(Paths.get(handSignature.toURI()), Paths.get(internalPath2));
+        copy_attached_data(handSignature, strHandSignatures);
 
         String today = Utils.today();
         Personal_ID personalId = new Personal_ID(ID_number, privateProfile, today, validUntil, name, surname, birthdate,
-                address, dynamicAttributeValues, personalPictureFileName, handSignatureFileName);
+                address, dynamicAttributeValues, personalPicture.getName(), handSignature.getName());
         byte[] personalId_b = personalId.toByte(true);
 
         //Create signature
@@ -152,8 +144,8 @@ public class Controller extends Observable {
         publicProfile.saveExternal(destination);
     }
 
-    public void importPublicProfile(File publicProfileFile) throws IOException {
-        PublicProfile publicProfile = PublicProfile.fromExternal(publicProfileFile);
+    public void importPublicProfile(InputStream inputStream) throws IOException {
+        PublicProfile publicProfile = PublicProfile.fromExternal(inputStream);
         publicProfile.saveInternal(appDataLocation + strImportedPublicProfiles);
     }
 
@@ -188,9 +180,8 @@ public class Controller extends Observable {
         fos.close();
     }
 
-    public void importPersonalID(File source) throws Exception {
-        FileInputStream fis = new FileInputStream(source);
-        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
+    public void importPersonalID(InputStream inputStream) throws Exception {
+        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
         // read personal id
         byte[] personal_id_b = sliceReader.next();
         // read signature
@@ -198,7 +189,7 @@ public class Controller extends Observable {
         // read personal image and hand signature
         byte[] personalImage_b = sliceReader.next();
         byte[] handSignature_b = sliceReader.next();
-        fis.close();
+        inputStream.close();
         String[] personal_id_s = Utils.bytesToStringArray(personal_id_b);
 
         Personal_ID personalId = Personal_ID.fromString(this, LOAD_PROFILE_FROM_IMPORTED, personal_id_s);
@@ -227,15 +218,8 @@ public class Controller extends Observable {
         fos1.close();
 
 
-        File f_personal_image = Utils.createFileAndSubfolder(appDataLocation + strPersonalImages + imageName);
-        FileOutputStream fos2 = new FileOutputStream(f_personal_image);
-        fos2.write(personalImage_b);
-        fos2.close();
-
-        File f_hand_signature = Utils.createFileAndSubfolder(appDataLocation + strHandSignatures + handSignatureName);
-        FileOutputStream fos3 = new FileOutputStream(f_hand_signature);
-        fos3.write(handSignature_b);
-        fos3.close();
+        saveAttachedData(appDataLocation + strPersonalImages + imageName, personalImage_b);
+        saveAttachedData(appDataLocation + strHandSignatures + handSignatureName, handSignature_b);
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
@@ -300,6 +284,21 @@ public class Controller extends Observable {
             return;
         }
         notifyObservers(new OutputEvent.ShowProfileEvent(profile.toString()));
+    }
+
+    public void saveAttachedData(String url, byte[] data) throws IOException {
+        File f = Utils.createFileAndSubfolder(url);
+        FileOutputStream fos = new FileOutputStream(f);
+        fos.write(data);
+        fos.close();
+    }
+
+    private void copy_attached_data(File from, String to) throws IOException {
+        String fileName = from.getName();
+        String internalPath = appDataLocation + to + fileName;
+        File imageDir2 = new File(appDataLocation + to);
+        imageDir2.mkdirs();
+        Files.copy(Paths.get(from.toURI()), Paths.get(internalPath));
     }
 
     @Override

@@ -6,6 +6,7 @@ import utils.OutputEvent;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
@@ -117,7 +118,7 @@ public class TUI implements Observer {
         if(publicProfile == null) {
             return;
         }
-        controller.importPublicProfile(publicProfile);
+        controller.importPublicProfile(Files.newInputStream(publicProfile.toPath()));
     }
 
     private void doImportPersonalID() throws Exception {
@@ -128,7 +129,7 @@ public class TUI implements Observer {
         if(source == null) {
             return;
         }
-        controller.importPersonalID(source);
+        controller.importPersonalID(Files.newInputStream(source.toPath()));
     }
 
     private void doExportPublicProfile() throws IOException {

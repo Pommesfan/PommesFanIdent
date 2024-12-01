@@ -41,9 +41,8 @@ public class PublicProfile {
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
-    public static PublicProfile fromExternal(File publicProfileFile) throws IOException {
-        FileInputStream fis = new FileInputStream(publicProfileFile);
-        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
+    public static PublicProfile fromExternal(InputStream inputStream) throws IOException {
+        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -51,7 +50,7 @@ public class PublicProfile {
         ValidityPeriod validityPeriod = ValidityPeriod.fromStringArray(profileParams, 3);
         String[] dynamic_attributes = Utils.sliceStringArray(profileParams, 7, profileParams.length);
         byte[] public_profile_b = sliceReader.next();
-        fis.close();
+        inputStream.close();
         return new PublicProfile(public_profile_name, sequence_number, creationDate, validityPeriod, dynamic_attributes, public_profile_b);
     }
 
