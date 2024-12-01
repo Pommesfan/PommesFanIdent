@@ -98,7 +98,7 @@ public class Controller extends Observable {
         //Save ID
         File f = Utils.createFileAndSubfolder(distPath);
         FileOutputStream fos = new FileOutputStream(f);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
         sliceWriter.write(personalId_b);
         sliceWriter.write(signature_b);
         fos.close();
@@ -120,7 +120,7 @@ public class Controller extends Observable {
         //load personal id
         File f = new File(distPath);
         FileInputStream fis = new FileInputStream(f);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         byte[] personal_id_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         fis.close();
@@ -145,6 +145,8 @@ public class Controller extends Observable {
     public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strCreatedProfiles, profileName, sequence_number);
+        if(privateProfile == null)
+            return;
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination);
@@ -161,7 +163,7 @@ public class Controller extends Observable {
         //load personal id
         File f = new File(distPath);
         FileInputStream fis = new FileInputStream(f);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         byte[] personal_id_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         fis.close();
@@ -178,7 +180,7 @@ public class Controller extends Observable {
         byte[] handSignature_b = Files.readAllBytes(Paths.get(appDataLocation + strHandSignatures + personalId.handSignaturePath));
 
         FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
         sliceWriter.write(personal_id_b);
         sliceWriter.write(signature_b);
         sliceWriter.write(personalImage_b);
@@ -188,7 +190,7 @@ public class Controller extends Observable {
 
     public void importPersonalID(File source) throws Exception {
         FileInputStream fis = new FileInputStream(source);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         // read personal id
         byte[] personal_id_b = sliceReader.next();
         // read signature
@@ -219,7 +221,7 @@ public class Controller extends Observable {
         String id_path = appDataLocation + strImportedPersonalIDs + id_number;
         File f_personal_id = Utils.createFileAndSubfolder(id_path);
         FileOutputStream fos1 = new FileOutputStream(f_personal_id);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos1.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos1);
         sliceWriter.write(personal_id_b);
         sliceWriter.write(signature_b);
         fos1.close();
@@ -243,7 +245,7 @@ public class Controller extends Observable {
         Socket s = serverSocket.accept();
         InputStream inputStream = new BufferedInputStream(s.getInputStream());
 
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> inputStream.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
         byte[] personal_id_b = sliceReader.next();
         byte[] personal_image_b = sliceReader.next();
         byte[] handSignature_b = sliceReader.next();
@@ -268,7 +270,7 @@ public class Controller extends Observable {
         //load personal id
         String distPath = appDataLocation + strImportedPersonalIDs + id_number.toUpperCase();
         FileInputStream fis = new FileInputStream(distPath);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         byte[] personal_id_b = sliceReader.next();
         byte[] signature_b = sliceReader.next();
         // load personal image
@@ -284,7 +286,7 @@ public class Controller extends Observable {
         OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
 
         //hand in
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> outputStream.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(outputStream);
         sliceWriter.write(personal_id_b);
         sliceWriter.write(personalImage_b);
         sliceWriter.write(handSignature_b);

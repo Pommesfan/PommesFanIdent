@@ -106,53 +106,45 @@ public class Utils {
             baos.write('\n');
         }
 
+        public void write_byte(byte[] b) throws IOException {
+            baos.write(b);
+        }
+
         public byte[] get_bytes() throws IOException {
             baos.close();
             return baos.toByteArray();
         }
-
-        public void write_byte(byte[] b) throws IOException {
-            baos.write(b);
-        }
     }
 
     public static class SliceReader {
-        private final Readable readable;
-        public SliceReader(Readable readable) {
-            this.readable = readable;
+        private final InputStream inputStream;
+        public SliceReader(InputStream inputStream) {
+            this.inputStream = inputStream;
         }
 
         public byte[] next() throws IOException {
             int len = nextInt();
             byte[] data = new byte[len];
-            readable.read(data, len);
+            inputStream.read(data, 0, len);
             return data;
         }
 
         private int nextInt() throws IOException {
             byte[] len_personal_id_b = new byte[4];
-            readable.read(len_personal_id_b, 4);
+            inputStream.read(len_personal_id_b, 0, 4);
             return Utils.bytes_to_int(len_personal_id_b);
         }
     }
 
     public static class SliceWriter {
-        private final Writable writable;
-        public SliceWriter(Writable writable) {
-            this.writable = writable;
+        private final OutputStream outputStream;
+        public SliceWriter(OutputStream outputStream) {
+            this.outputStream = outputStream;
         }
 
         public void write(byte[] b) throws IOException {
-            writable.write(int_to_bytes(b.length));
-            writable.write(b);
+            outputStream.write(int_to_bytes(b.length));
+            outputStream.write(b);
         }
-    }
-
-    public interface Writable {
-        void write(byte[] data) throws IOException;
-    }
-
-    public interface Readable {
-        void read(byte[] data, int length) throws IOException;
     }
 }

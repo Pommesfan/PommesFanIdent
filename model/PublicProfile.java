@@ -29,7 +29,7 @@ public class PublicProfile {
             return null;
         }
         FileInputStream fis = new FileInputStream(f);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
 
         String creationDate = profileParams[0];
@@ -43,7 +43,7 @@ public class PublicProfile {
 
     public static PublicProfile fromExternal(File publicProfileFile) throws IOException {
         FileInputStream fis = new FileInputStream(publicProfileFile);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -57,7 +57,7 @@ public class PublicProfile {
 
     public void saveExternal(File destination) throws IOException {
         FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
     }
@@ -65,7 +65,7 @@ public class PublicProfile {
     public void saveInternal(String path) throws IOException {
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(publicKey);
         fos.close();

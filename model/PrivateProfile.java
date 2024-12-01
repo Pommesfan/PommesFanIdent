@@ -15,7 +15,7 @@ public class PrivateProfile extends PublicProfile{
     public void saveInternal(String url) throws IOException {
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(data -> fos.write(data));
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(privateKey);
         sliceWriter.write(publicKey);
@@ -29,7 +29,7 @@ public class PrivateProfile extends PublicProfile{
             return null;
         }
         FileInputStream fis = new FileInputStream(f);
-        Utils.SliceReader sliceReader = new Utils.SliceReader((data, length) -> fis.read(data, 0, length));
+        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String created = profileParams[0];
         ValidityPeriod validityPeriod = ValidityPeriod.fromStringArray(profileParams, 1);
