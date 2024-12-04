@@ -2,7 +2,12 @@ package utils;
 
 import java.io.*;
 import java.nio.ByteBuffer;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.Random;
 
 public class Utils {
@@ -93,6 +98,49 @@ public class Utils {
             res[i] = s[i + start];
         }
         return res;
+    }
+
+    public static boolean dateAfter(String d1, String d2, boolean orEquals) throws ParseException {
+        String pattern = "dd.MM.yyyy";
+        Date date1 = new SimpleDateFormat(pattern).parse(d1);
+        Date date2 = new SimpleDateFormat(pattern).parse(d2);
+        return date2.after(date1) || (orEquals && date2.equals(date1));
+    }
+
+    public static int daysBetween(String d1, String d2) throws ParseException {
+        String pattern = "dd.MM.yyyy";
+        Date date1 = new SimpleDateFormat(pattern).parse(d1);
+        Calendar calendar1 = new GregorianCalendar();
+        calendar1.setTime(date1);
+
+        Date date2 = new SimpleDateFormat(pattern).parse(d2);
+        Calendar calendar2 = new GregorianCalendar();
+        calendar2.setTime(date2);
+
+        int dayOfYear1 = calendar1.get(GregorianCalendar.DAY_OF_YEAR);
+        int dayOfYear2 = calendar2.get(GregorianCalendar.DAY_OF_YEAR);
+        int year1 = calendar1.get(GregorianCalendar.YEAR);
+        int year2 = calendar2.get(GregorianCalendar.YEAR);
+        int year_diff = year2 - year1;
+        int daysBetweenYears = 0;
+        if(year_diff > 0){
+            for (int i = year1; i < year2; i++) {
+                if(i % 4 == 0) {
+                    daysBetweenYears += 366;
+                } else {
+                    daysBetweenYears += 365;
+                }
+            }
+        } else {
+            for (int i = year1; i > year2; i--) {
+                if(i % 4 == 0) {
+                    daysBetweenYears -= 366;
+                } else {
+                    daysBetweenYears -= 365;
+                }
+            }
+        }
+        return daysBetweenYears + (dayOfYear2 - dayOfYear1);
     }
 
     public static class LineWriter {
