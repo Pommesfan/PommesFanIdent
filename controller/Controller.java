@@ -44,7 +44,7 @@ public class Controller extends Observable {
 
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, created, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
+        privateProfile.saveInternal(this, appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
     }
 
     private byte[] sign_id(Personal_ID personalId, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException, IOException {
@@ -129,7 +129,7 @@ public class Controller extends Observable {
 
     public void importPublicProfile(InputStream inputStream) throws IOException {
         PublicProfile publicProfile = PublicProfile.fromExternal(inputStream);
-        publicProfile.saveInternal(appDataLocation + strImportedPublicProfiles);
+        publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
     }
 
     public void exportPersonalID(String personalID_s, File destination) throws Exception {

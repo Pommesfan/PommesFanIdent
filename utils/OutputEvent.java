@@ -44,4 +44,15 @@ public interface OutputEvent {
             this.msg = msg;
         }
     }
+
+    class ProfileAlreadyExistsEvent implements OutputEvent{}
+
+    class IDalreadyExistsEvent implements OutputEvent {}
+
+    class ProfileNotPresent implements OutputEvent{
+        public final boolean namePresent;
+        public ProfileNotPresent(boolean namePresent){
+            this.namePresent = namePresent;
+        }
+    }
 }

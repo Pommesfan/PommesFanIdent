@@ -207,6 +207,16 @@ public class TUI implements Observer {
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");
         } else if (e instanceof OutputEvent.ShowProfileEvent) {
             System.out.println(((OutputEvent.ShowProfileEvent) e).msg);
+        } else if (e instanceof  OutputEvent.ProfileAlreadyExistsEvent) {
+            System.out.println("Profil mit diesem Namen sowie Folgenummer bereits gespeichert");
+        } else if (e instanceof OutputEvent.IDalreadyExistsEvent) {
+            System.out.println("Ausweis mit diesem Namen bereits gespeichert");
+        } else if(e instanceof OutputEvent.ProfileNotPresent) {
+            if(((OutputEvent.ProfileNotPresent) e).namePresent)
+                System.out.println("Profil mit dieser Sequenznummer nicht gespeichert, aber Profilname gespeichert");
+            else {
+                System.out.println("Profil mit diesem Profilnamen nicht gespeichert");
+            }
         }
         System.out.println();
     }

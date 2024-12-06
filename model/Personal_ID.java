@@ -1,6 +1,5 @@
 package model;
 
-import com.sun.istack.internal.NotNull;
 import controller.Controller;
 import utils.OutputEvent;
 import utils.Utils;
@@ -22,8 +21,8 @@ public class Personal_ID {
     public final String[] dynamicAttributesValues;
     public final String personalImagePath;
     public final String handSignaturePath;
-    @NotNull public Optional<byte[]> signature = Optional.empty();
-    @NotNull public Optional<BLOB> blob = Optional.empty();
+    public Optional<byte[]> signature = Optional.empty();
+    public Optional<BLOB> blob = Optional.empty();
 
     public Personal_ID(String pIDnumber, PublicProfile pPublicProfile, String pCreated, String pValidUntil, String pName,
                        String pSurname, String pBirthDate, String pAddress, String[] pDynamicAttributesValues,
@@ -147,6 +146,10 @@ public class Personal_ID {
             throw new NoSuchMethodException("created_or_imported must be 1 or 2");
         }
 
+        if(Utils.isPresent(location + ID_number)) {
+            controller.notifyObservers(new OutputEvent.IDalreadyExistsEvent());
+            return;
+        }
         File f = Utils.createFileAndSubfolder(location + ID_number);
         FileOutputStream fos = new FileOutputStream(f);
         toOutputStream(fos, false);

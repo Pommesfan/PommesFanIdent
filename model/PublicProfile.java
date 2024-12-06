@@ -23,6 +23,17 @@ public class PublicProfile {
     }
 
     public static PublicProfile loadInternal(Controller controller, String path, String profileName, int sequence_number) throws IOException {
+        if(!Utils.isPresent(path + profileName)) {
+            controller.notifyObservers(new OutputEvent.ProfileNotPresent(false));
+            return null;
+        }
+
+        if(!Utils.isPresent(path + profileName + "/" + sequence_number)) {
+            controller.notifyObservers(new OutputEvent.ProfileNotPresent(true));
+            return null;
+        }
+
+
         File f = new File(path + profileName + "/" + sequence_number);
         if(!f.exists()) {
             controller.notifyObservers(new OutputEvent.NoSuchPublicProfileEvent(profileName, sequence_number));
@@ -61,7 +72,11 @@ public class PublicProfile {
         sliceWriter.write(publicKey);
     }
 
-    public void saveInternal(String path) throws IOException {
+    public void saveInternal(Controller controller, String path) throws IOException {
+        if(Utils.isPresent(path + name) && Utils.isPresent(path + name + "/" + sequence_number)) {
+            controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
+            return;
+        }
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);

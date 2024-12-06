@@ -12,7 +12,11 @@ public class PrivateProfile extends PublicProfile{
         this.privateKey = privateKey;
     }
 
-    public void saveInternal(String url) throws IOException {
+    public void saveInternal(Controller controller, String url) throws IOException {
+        if(Utils.isPresent(url)) {
+            controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
+            return;
+        }
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);

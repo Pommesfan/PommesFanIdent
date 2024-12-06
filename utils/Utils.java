@@ -100,6 +100,10 @@ public class Utils {
         return res;
     }
 
+    public static boolean isPresent(String url) {
+        return new File(url).exists();
+    }
+
     public static boolean dateAfter(String d1, String d2, boolean orEquals) throws ParseException {
         String pattern = "dd.MM.yyyy";
         Date date1 = new SimpleDateFormat(pattern).parse(d1);
