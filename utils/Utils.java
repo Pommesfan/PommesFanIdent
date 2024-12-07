@@ -94,9 +94,7 @@ public class Utils {
 
     public static String[] sliceStringArray(String[] s, int start, int end) {
         String[] res = new String[end - start];
-        for (int i = 0; i < res.length; i++) {
-            res[i] = s[i + start];
-        }
+        System.arraycopy(s, 0 + start, res, 0, res.length);
         return res;
     }
 

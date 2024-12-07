@@ -14,6 +14,7 @@ import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
+import java.text.ParseException;
 import java.util.NoSuchElementException;
 import java.util.Observable;
 import java.util.Optional;
@@ -34,21 +35,39 @@ public class Controller extends Observable {
         this.appDataLocation = appDataLocation;
     }
 
-    public void generateKeyPair(String profileName, int sequence_number, PublicProfile.ValidityPeriod validityPeriod, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException {
+    public void generateKeyPair(String profileName, int sequence_number, PublicProfile.ValidityPeriod validityPeriod, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException, ParseException {
+        if(!Utils.validateStringDate(validityPeriod.validFrom) || !Utils.validateStringDate(validityPeriod.validUntilForCreation)
+                || !Utils.validateStringDate(validityPeriod.validUntilForCreated)) {
+            notifyObservers(new OutputEvent.InvalidDateEvent());
+            return;
+        }
+
+        String todayDate = Utils.today();
+
+        if(!validateValidityPeriod(validityPeriod, todayDate)) {
+            notifyObservers(new OutputEvent.InvalidDateSequenceEvent());
+            return;
+        }
+
         KeyPairGenerator gpk = KeyPairGenerator.getInstance(encryptionAlgorithm);
         gpk.initialize(2048);
         KeyPair keyPair = gpk.generateKeyPair();
         PrivateKey privateKey = keyPair.getPrivate();
         PublicKey publicKey = keyPair.getPublic();
-        String created = Utils.today();
 
         PrivateProfile privateProfile = new PrivateProfile(
-                profileName, sequence_number, created, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
+                profileName, sequence_number, todayDate, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
         privateProfile.saveInternal(this, appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
     }
 
+    private boolean validateValidityPeriod(PublicProfile.ValidityPeriod v, String todayDate) throws ParseException {
+        return Utils.dateAfter(todayDate, v.validFrom, true) &&
+                Utils.dateAfter(v.validFrom, v.validUntilForCreation, false) &&
+                Utils.dateAfter(v.validUntilForCreation, v.validUntilForCreated, false);
+    }
+
     private byte[] sign_id(Personal_ID personalId, PrivateProfile privateProfile) throws NoSuchAlgorithmException, InvalidKeySpecException, SignatureException, InvalidKeyException, IOException {
-        if(!personalId.blob.isPresent())
+        if(personalId.blob.isEmpty())
             throw new NoSuchAlgorithmException("Optional of BLOB is empty");
         Personal_ID.BLOB blob = personalId.blob.get();
         byte[] personalId_with_blob_b = Utils.concat_bytes(
@@ -63,6 +82,11 @@ public class Controller extends Observable {
     }
 
     public void generateID(Controller controller, String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+        if(!Utils.validateStringDate(validUntil)) {
+            notifyObservers(new OutputEvent.InvalidDateEvent());
+            return;
+        }
+
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strCreatedProfiles, publicProfileName, sequence_number);
@@ -91,9 +115,9 @@ public class Controller extends Observable {
     }
 
     private boolean validateSignature(Personal_ID personalId) throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException, IOException {
-        if(!personalId.blob.isPresent())
+        if(personalId.blob.isEmpty())
             throw new NoSuchElementException("Option of BLOB is empty");
-        if(!personalId.signature.isPresent())
+        if(personalId.signature.isEmpty())
             throw new NoSuchElementException("Option of signature is empty");
         Personal_ID.BLOB blob = personalId.blob.get();
         byte[] personal_id_b = Utils.concat_bytes(personalId.toByte(false), blob.personal_image, blob.hand_signature);

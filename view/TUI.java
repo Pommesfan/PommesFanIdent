@@ -8,6 +8,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
+import java.text.ParseException;
 import java.util.*;
 
 public class TUI implements Observer {
@@ -42,7 +43,7 @@ public class TUI implements Observer {
         }
     }
 
-    private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException {
+    private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException, ParseException {
         System.out.println("Name für Öffentliches Profil:");
         String name = sc.next();
         System.out.println("Folgenummer:");
@@ -193,31 +194,31 @@ public class TUI implements Observer {
             System.out.println(((OutputEvent.PersonalIDValidEvent) e).personalIDprintout);
         } else if(e instanceof OutputEvent.PersonalIDInvalidEvent){
             System.out.println("Ausweis ist nicht korrekt\n");
-        } else if (e instanceof OutputEvent.ServerStartedEvent) {
-            OutputEvent.ServerStartedEvent serverStartedEvent = (OutputEvent.ServerStartedEvent) e;
+        } else if (e instanceof OutputEvent.ServerStartedEvent serverStartedEvent) {
             System.out.println("IP-Adresse:");
             System.out.println(serverStartedEvent.ip);
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
-        } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent) {
-            OutputEvent.NoSuchPublicProfileEvent evt = (OutputEvent.NoSuchPublicProfileEvent) e;
+        } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent evt) {
             System.out.println("Profil:\nName: " + evt.name + "\nFolgenummer: " + evt.sequence_number + "\nnicht gespeichert");
-        } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent) {
-            OutputEvent.DynamicAttributesDoesntFitEvent evt = ((OutputEvent.DynamicAttributesDoesntFitEvent) e);
+        } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent evt) {
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");
         } else if (e instanceof OutputEvent.ShowProfileEvent) {
             System.out.println(((OutputEvent.ShowProfileEvent) e).msg);
         } else if (e instanceof  OutputEvent.ProfileAlreadyExistsEvent) {
             System.out.println("Profil mit diesem Namen sowie Folgenummer bereits gespeichert");
         } else if (e instanceof OutputEvent.IDalreadyExistsEvent) {
-            System.out.println("Ausweis mit diesem Namen bereits gespeichert");
+            System.out.println("Ausweis mit dieser Ausweisnummer bereits gespeichert");
         } else if(e instanceof OutputEvent.ProfileNotPresent) {
             if(((OutputEvent.ProfileNotPresent) e).namePresent)
                 System.out.println("Profil mit dieser Sequenznummer nicht gespeichert, aber Profilname gespeichert");
             else {
                 System.out.println("Profil mit diesem Profilnamen nicht gespeichert");
             }
+        } else if (e instanceof OutputEvent.InvalidDateEvent) {
+            System.out.println("Fehlerhafte Datumsangabe");
+        } else if (e instanceof OutputEvent.InvalidDateSequenceEvent) {
+            System.out.println("Reihenfolge der Datumsangaben für Profil ungültig");
         }
-        System.out.println();
     }
 }

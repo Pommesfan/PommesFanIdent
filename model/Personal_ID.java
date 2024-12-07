@@ -116,13 +116,13 @@ public class Personal_ID {
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(outputStream);
         sliceWriter.write(toByte(true));
 
-        if(!signature.isPresent())
+        if(signature.isEmpty())
             throw new NoSuchElementException("Optional of signature is empty");
 
         sliceWriter.write(signature.get());
         if(withBlob) {
 
-            if (!blob.isPresent())
+            if (blob.isEmpty())
                 throw new NoSuchElementException("Optional of BLOB is empty");
 
             BLOB blob_unwrapped = blob.get();
@@ -133,7 +133,7 @@ public class Personal_ID {
     }
 
     public void saveInternal(Controller controller, int created_or_imported) throws IOException, NoSuchMethodException {
-        if (!blob.isPresent())
+        if (blob.isEmpty())
             throw new NoSuchElementException("Optional of BLOB is empty");
         BLOB blob_unwrapped = blob.get();
 

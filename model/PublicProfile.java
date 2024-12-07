@@ -87,18 +87,16 @@ public class PublicProfile {
 
     @Override
     public String toString() {
-        StringBuilder sb = new StringBuilder();
-        sb.append("Profilname:\n");
-        sb.append(name);
-        sb.append("\nFolgenummer:\n");
-        sb.append(sequence_number);
-        sb.append("\nErstellt\n");
-        sb.append(created);
-        sb.append('\n');
-        sb.append(validityPeriod);
-        sb.append("Dynamische Attribute:\n");
-        sb.append(Utils.stringArrayToLines(dynamicAttributes));
-        return sb.toString();
+        return "Profilname:\n" +
+                name +
+                "\nFolgenummer:\n" +
+                sequence_number +
+                "\nErstellt\n" +
+                created +
+                '\n' +
+                validityPeriod +
+                "Dynamische Attribute:\n" +
+                Utils.stringArrayToLines(dynamicAttributes);
     }
 
     public byte[] toByteArray(boolean addNameAndSequence) throws IOException {
@@ -127,17 +125,15 @@ public class PublicProfile {
 
         @Override
         public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append("Gültig ab:\n");
-            sb.append(validFrom);
-            sb.append("\nGültig bis, bezüglich Erstellung:\n");
-            sb.append(validUntilForCreation);
-            sb.append("\nGültig bis, bezüglich Gültigkeit erstellter Ausweise:\n");
-            sb.append(validUntilForCreated);
-            sb.append("\nMaximale Gültigkeit Tage:\n");
-            sb.append(maxValidDays);
-            sb.append('\n');
-            return sb.toString();
+            return "Gültig ab:\n" +
+                    validFrom +
+                    "\nGültig bis, bezüglich Erstellung:\n" +
+                    validUntilForCreation +
+                    "\nGültig bis, bezüglich Gültigkeit erstellter Ausweise:\n" +
+                    validUntilForCreated +
+                    "\nMaximale Gültigkeit Tage:\n" +
+                    maxValidDays +
+                    '\n';
         }
 
         public byte[] toByteArray() throws IOException {

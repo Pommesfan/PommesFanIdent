@@ -55,4 +55,8 @@ public interface OutputEvent {
             this.namePresent = namePresent;
         }
     }
+
+    class InvalidDateEvent implements OutputEvent {}
+
+    class InvalidDateSequenceEvent implements OutputEvent {}
 }
