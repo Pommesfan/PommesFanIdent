@@ -219,6 +219,8 @@ public class TUI implements Observer {
             System.out.println("Fehlerhafte Datumsangabe");
         } else if (e instanceof OutputEvent.InvalidDateSequenceEvent) {
             System.out.println("Reihenfolge der Datumsangaben für Profil ungültig");
+        } else if (e instanceof OutputEvent.PersonalIDoutOfValidityPeriod) {
+            System.out.println("Gültigkeitsdatum von Ausweis passt nicht zu Profil");
         }
     }
 }

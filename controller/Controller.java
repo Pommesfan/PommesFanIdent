@@ -93,6 +93,14 @@ public class Controller extends Observable {
         if(privateProfile == null) {
             return;
         }
+
+        // check validity period
+        String today = Utils.today();
+        if(!checkPersonalIDvalidDate(privateProfile.validityPeriod, today, validUntil)) {
+            notifyObservers(new OutputEvent.PersonalIDoutOfValidityPeriod());
+            return;
+        }
+
         int nDynamicAttributes = privateProfile.dynamicAttributes.length;
         if(nDynamicAttributes != dynamicAttributeValues.length) {
             controller.notifyObservers(new OutputEvent.DynamicAttributesDoesntFitEvent(nDynamicAttributes));
@@ -103,7 +111,6 @@ public class Controller extends Observable {
         byte[] personalImage_b = Files.readAllBytes(personalPicture.toPath());
         byte[] handSignature_b = Files.readAllBytes(handSignature.toPath());
 
-        String today = Utils.today();
         Personal_ID personalId = new Personal_ID(ID_number, privateProfile, today, validUntil, name, surname, birthdate,
                 address, dynamicAttributeValues, personalPicture.getName(), handSignature.getName());
         personalId.blob = Optional.of(new Personal_ID.BLOB(personalImage_b, handSignature_b));
@@ -112,6 +119,11 @@ public class Controller extends Observable {
         personalId.signature = Optional.of(signature_b);
         //Save ID
         personalId.saveInternal(this, LOAD_FROM_CREATED);
+    }
+
+    public boolean checkPersonalIDvalidDate(PublicProfile.ValidityPeriod v, String today, String validUntil) throws ParseException {
+        return Utils.dateAfter(v.validFrom, today, true) && Utils.dateAfter(today, v.validUntilForCreation, true) &&
+                Utils.dateAfter(validUntil, v.validUntilForCreated, true) && Utils.daysBetween(today, validUntil) <= v.maxValidDays;
     }
 
     private boolean validateSignature(Personal_ID personalId) throws NoSuchAlgorithmException, InvalidKeySpecException, InvalidKeyException, SignatureException, IOException {

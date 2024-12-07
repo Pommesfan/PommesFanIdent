@@ -59,4 +59,6 @@ public interface OutputEvent {
     class InvalidDateEvent implements OutputEvent {}
 
     class InvalidDateSequenceEvent implements OutputEvent {}
+
+    class PersonalIDoutOfValidityPeriod implements OutputEvent {}
 }
