@@ -141,9 +141,9 @@ public class TUI implements Observer {
         System.out.println("Zielordner wählen!");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File(profileName + "-" + sequence_number));
-        fileChooser.showSaveDialog(null);
+        int res = fileChooser.showSaveDialog(null);
         File destination = fileChooser.getSelectedFile();
-        if(destination == null) {
+        if(res != JFileChooser.APPROVE_OPTION) {
             return;
         }
         controller.exportPublicProfile(profileName, sequence_number, destination);
@@ -155,9 +155,9 @@ public class TUI implements Observer {
         System.out.println("Zielordner wählen!");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.setSelectedFile(new File(id_number.toUpperCase()));
-        fileChooser.showSaveDialog(null);
+        int res = fileChooser.showSaveDialog(null);
         File destination = fileChooser.getSelectedFile();
-        if(destination == null) {
+        if(res != JFileChooser.APPROVE_OPTION) {
             return;
         }
         controller.exportPersonalID(id_number, destination);
