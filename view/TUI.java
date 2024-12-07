@@ -199,8 +199,12 @@ public class TUI implements Observer {
             System.out.println(serverStartedEvent.ip);
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
-        } else if (e instanceof OutputEvent.NoSuchPublicProfileEvent evt) {
-            System.out.println("Profil:\nName: " + evt.name + "\nFolgenummer: " + evt.sequence_number + "\nnicht gespeichert");
+        } else if (e instanceof OutputEvent.NoSuchProfileEvent evt) {
+            if(evt.namePresent)
+                System.out.println("Profil mit der Sequenznummer " + evt.sequence_number + " nicht gespeichert, aber Profilname " + evt.name + " gespeichert");
+            else {
+                System.out.println("Profil mit dem Profilnamen " + evt.name + " nicht gespeichert");
+            }
         } else if (e instanceof OutputEvent.DynamicAttributesDoesntFitEvent evt) {
             System.out.println("Anzahl dynamischer Attribute unpassend: Profil hat " + evt.nDynamicAttributes + " Attribute");
         } else if (e instanceof OutputEvent.ShowProfileEvent) {
@@ -209,18 +213,14 @@ public class TUI implements Observer {
             System.out.println("Profil mit diesem Namen sowie Folgenummer bereits gespeichert");
         } else if (e instanceof OutputEvent.IDalreadyExistsEvent) {
             System.out.println("Ausweis mit dieser Ausweisnummer bereits gespeichert");
-        } else if(e instanceof OutputEvent.ProfileNotPresent) {
-            if(((OutputEvent.ProfileNotPresent) e).namePresent)
-                System.out.println("Profil mit dieser Sequenznummer nicht gespeichert, aber Profilname gespeichert");
-            else {
-                System.out.println("Profil mit diesem Profilnamen nicht gespeichert");
-            }
         } else if (e instanceof OutputEvent.InvalidDateEvent) {
             System.out.println("Fehlerhafte Datumsangabe");
         } else if (e instanceof OutputEvent.InvalidDateSequenceEvent) {
             System.out.println("Reihenfolge der Datumsangaben für Profil ungültig");
         } else if (e instanceof OutputEvent.PersonalIDoutOfValidityPeriod) {
             System.out.println("Gültigkeitsdatum von Ausweis passt nicht zu Profil");
+        } else if (e instanceof OutputEvent.NoSuchPersonalIDevent evt) {
+            System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " nicht gespeichert");
         }
     }
 }

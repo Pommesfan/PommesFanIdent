@@ -23,23 +23,17 @@ public class PublicProfile {
     }
 
     public static PublicProfile loadInternal(Controller controller, String path, String profileName, int sequence_number) throws IOException {
-        if(!Utils.isPresent(path + profileName)) {
-            controller.notifyObservers(new OutputEvent.ProfileNotPresent(false));
+        if(!Utils.exists(path + profileName)) {
+            controller.notifyObservers(new OutputEvent.NoSuchProfileEvent(profileName, sequence_number, false));
             return null;
         }
 
-        if(!Utils.isPresent(path + profileName + "/" + sequence_number)) {
-            controller.notifyObservers(new OutputEvent.ProfileNotPresent(true));
+        if(!Utils.exists(path + profileName + "/" + sequence_number)) {
+            controller.notifyObservers(new OutputEvent.NoSuchProfileEvent(profileName, sequence_number, true));
             return null;
         }
 
-
-        File f = new File(path + profileName + "/" + sequence_number);
-        if(!f.exists()) {
-            controller.notifyObservers(new OutputEvent.NoSuchPublicProfileEvent(profileName, sequence_number));
-            return null;
-        }
-        FileInputStream fis = new FileInputStream(f);
+        FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
         Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
 
@@ -73,7 +67,7 @@ public class PublicProfile {
     }
 
     public void saveInternal(Controller controller, String path) throws IOException {
-        if(Utils.isPresent(path + name) && Utils.isPresent(path + name + "/" + sequence_number)) {
+        if(Utils.exists(path + name) && Utils.exists(path + name + "/" + sequence_number)) {
             controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
             return;
         }

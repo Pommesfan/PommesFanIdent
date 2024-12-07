@@ -22,12 +22,14 @@ public interface OutputEvent {
         }
     }
 
-    class NoSuchPublicProfileEvent implements OutputEvent{
+    class NoSuchProfileEvent implements OutputEvent{
         public final String name;
         public final int sequence_number;
-        public NoSuchPublicProfileEvent(String name, int sequence_number) {
+        public final boolean namePresent;
+        public NoSuchProfileEvent(String name, int sequence_number, boolean namePresent) {
             this.name = name;
             this.sequence_number = sequence_number;
+            this.namePresent = namePresent;
         }
     }
 
@@ -49,16 +51,16 @@ public interface OutputEvent {
 
     class IDalreadyExistsEvent implements OutputEvent {}
 
-    class ProfileNotPresent implements OutputEvent{
-        public final boolean namePresent;
-        public ProfileNotPresent(boolean namePresent){
-            this.namePresent = namePresent;
-        }
-    }
-
     class InvalidDateEvent implements OutputEvent {}
 
     class InvalidDateSequenceEvent implements OutputEvent {}
 
     class PersonalIDoutOfValidityPeriod implements OutputEvent {}
+
+    class NoSuchPersonalIDevent implements OutputEvent{
+        public final String idNumber;
+        public NoSuchPersonalIDevent(String idNumber) {
+            this.idNumber = idNumber;
+        }
+    }
 }

@@ -98,7 +98,7 @@ public class Utils {
         return res;
     }
 
-    public static boolean isPresent(String url) {
+    public static boolean exists(String url) {
         return new File(url).exists();
     }
 

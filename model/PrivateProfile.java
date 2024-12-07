@@ -13,7 +13,7 @@ public class PrivateProfile extends PublicProfile{
     }
 
     public void saveInternal(Controller controller, String url) throws IOException {
-        if(Utils.isPresent(url)) {
+        if(Utils.exists(url)) {
             controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
             return;
         }
@@ -27,12 +27,15 @@ public class PrivateProfile extends PublicProfile{
     }
 
     public static PrivateProfile fromInternalFile(Controller controller, String path, String profileName, int sequence_number) throws IOException {
-        File f = new File(path + profileName + "/" + sequence_number);
-        if(!f.exists()) {
-            controller.notifyObservers(new OutputEvent.NoSuchPublicProfileEvent(profileName, sequence_number));
+        if(!Utils.exists(path + profileName)) {
+            controller.notifyObservers(new OutputEvent.NoSuchProfileEvent(profileName, sequence_number, false));
             return null;
         }
-        FileInputStream fis = new FileInputStream(f);
+        if(!Utils.exists(path + profileName + "/" + sequence_number)) {
+            controller.notifyObservers(new OutputEvent.NoSuchProfileEvent(profileName, sequence_number, true));
+            return null;
+        }
+        FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
         Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String created = profileParams[0];

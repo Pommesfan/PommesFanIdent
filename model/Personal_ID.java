@@ -101,6 +101,10 @@ public class Personal_ID {
         } else {
             throw new NoSuchMethodException("created_or_imported must be 1 or 2");
         }
+        if(!Utils.exists(location + name)) {
+            controller.notifyObservers(new OutputEvent.NoSuchPersonalIDevent(name));
+            return null;
+        }
         FileInputStream fis = new FileInputStream(location + name);
         Personal_ID personalId = fromInputStream(controller, created_or_imported, fis, false);
         if(personalId == null)
@@ -146,7 +150,7 @@ public class Personal_ID {
             throw new NoSuchMethodException("created_or_imported must be 1 or 2");
         }
 
-        if(Utils.isPresent(location + ID_number)) {
+        if(Utils.exists(location + ID_number)) {
             controller.notifyObservers(new OutputEvent.IDalreadyExistsEvent());
             return;
         }
