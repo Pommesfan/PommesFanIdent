@@ -42,7 +42,7 @@ public class Personal_ID {
 
     public static Personal_ID fromString(Controller controller, int created_or_imported_profile, String[] attributes) throws Exception {
         String ID_number = attributes[0];
-        PublicProfile publicProfile = null;
+        PublicProfile publicProfile;
         final String profileName = attributes[1];
         final int sequence_number = Integer.parseInt(attributes[2]);
         if (created_or_imported_profile == Controller.LOAD_FROM_CREATED) {
@@ -57,6 +57,12 @@ public class Personal_ID {
         }
         String created = attributes[3];
         String validUntil = attributes[4];
+
+        if(!Utils.dateAfter(Utils.today(), validUntil, true)) {
+            controller.notifyObservers(new OutputEvent.PersonalIDoutdatedEvent(ID_number));
+            return null;
+        }
+
         String name = attributes[5];
         String surname = attributes[6];
         String birthdate = attributes[7];

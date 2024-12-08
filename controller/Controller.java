@@ -3,6 +3,7 @@ package controller;
 import model.Personal_ID;
 import model.PrivateProfile;
 import model.PublicProfile;
+import utils.Observable;
 import utils.OutputEvent;
 import utils.Utils;
 import java.io.*;
@@ -16,10 +17,9 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.NoSuchElementException;
-import java.util.Observable;
 import java.util.Optional;
 
-public class Controller extends Observable {
+public class Controller extends Observable<OutputEvent> {
     public static final int LOAD_FROM_CREATED = 1;
     public static final int LOAD_FROM_IMPORTED = 2;
     public static final String strCreatedProfiles = "CreatedProfiles/";
@@ -43,7 +43,6 @@ public class Controller extends Observable {
         }
 
         String todayDate = Utils.today();
-
         if(!validateValidityPeriod(validityPeriod, todayDate)) {
             notifyObservers(new OutputEvent.InvalidDateSequenceEvent());
             return;
@@ -237,11 +236,5 @@ public class Controller extends Observable {
         FileOutputStream fos = new FileOutputStream(f);
         fos.write(data);
         fos.close();
-    }
-
-    @Override
-    public void notifyObservers(Object o) {
-        setChanged();
-        super.notifyObservers(o);
     }
 }

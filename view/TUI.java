@@ -2,6 +2,7 @@ package view;
 
 import controller.Controller;
 import model.PublicProfile;
+import utils.Observer;
 import utils.OutputEvent;
 import javax.swing.*;
 import java.io.File;
@@ -9,9 +10,9 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
-import java.util.*;
+import java.util.Scanner;
 
-public class TUI implements Observer {
+public class TUI implements Observer<OutputEvent> {
     public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
             "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
             "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
@@ -186,9 +187,7 @@ public class TUI implements Observer {
     }
 
     @Override
-    public void update(Observable o, Object arg) {
-        OutputEvent e = (OutputEvent) arg;
-
+    public void update(OutputEvent e) {
         if(e instanceof OutputEvent.PersonalIDValidEvent) {
             System.out.println("Ausweis ist korrekt\n");
             System.out.println(((OutputEvent.PersonalIDValidEvent) e).personalIDprintout);
@@ -221,6 +220,8 @@ public class TUI implements Observer {
             System.out.println("Gültigkeitsdatum von Ausweis passt nicht zu Profil");
         } else if (e instanceof OutputEvent.NoSuchPersonalIDevent evt) {
             System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " nicht gespeichert");
+        } else if (e instanceof OutputEvent.PersonalIDoutdatedEvent evt) {
+            System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " abgelaufen");
         }
     }
 }

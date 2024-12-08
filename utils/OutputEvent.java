@@ -63,4 +63,11 @@ public interface OutputEvent {
             this.idNumber = idNumber;
         }
     }
+
+    class PersonalIDoutdatedEvent implements OutputEvent {
+        public final String idNumber;
+        public PersonalIDoutdatedEvent(String idNumber) {
+            this.idNumber = idNumber;
+        }
+    }
 }
