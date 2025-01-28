@@ -118,7 +118,6 @@ public class Personal_ID {
         byte[] personalImage_b = Files.readAllBytes(Paths.get(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath));
         byte[] handSignature_b = Files.readAllBytes(Paths.get(controller.appDataLocation + Controller.strHandSignatures + personalId.handSignaturePath));
         personalId.blob = Optional.of(new BLOB(personalImage_b, handSignature_b));
-        fis.close();
         return personalId;
     }
 
