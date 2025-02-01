@@ -5,10 +5,7 @@ import java.nio.ByteBuffer;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.Random;
+import java.util.*;
 
 public class Utils {
     public static String getAlphanumeric(int count) {
@@ -195,6 +192,107 @@ public class Utils {
         public void write(byte[] b) throws IOException {
             outputStream.write(int_to_bytes(b.length));
             outputStream.write(b);
+        }
+    }
+
+    public static class AES_InputStream extends InputStream {
+        private final InputStream inputStream;
+        public final int buf_len;
+        private byte[] buf;
+        private int buf_position = 0;
+        public AES_InputStream(InputStream inputStream, int buf_len) {
+            this.inputStream = inputStream;
+            this.buf_len = buf_len;
+        }
+        @Override
+        public int read() throws IOException {
+            byte[]b = new byte[1];
+            inputStream.read(b, 0, 4);
+            return ByteBuffer.wrap(b).getInt();
+        }
+
+        @Override
+        public int read(byte[] b, int off, int len) throws IOException {
+            if(buf == null) {
+                buf = new byte[buf_len];
+                inputStream.read(buf, 0, buf_len);
+            }
+            int b_position = 0;
+
+            while(b_position < b.length) {
+                int buf_remaining = buf_len - buf_position;
+                int b_remaining = b.length - b_position;
+
+                if(b_remaining < buf_remaining) {
+                    System.arraycopy(buf, buf_position, b, b_position, b_remaining);
+                    b_position += b_remaining;
+                    buf_position += b_remaining;
+                } else if (b_remaining == buf_remaining) {
+                    System.arraycopy(buf, buf_position, b, b_position, b_remaining);
+                    b_position += b_remaining;
+                    inputStream.read(buf, 0, buf_len);
+                    buf_position = 0;
+                } else {
+                    int chunk_size = buf_len - buf_position;
+                    System.arraycopy(buf, buf_position, b, b_position, chunk_size);
+                    inputStream.read(buf, 0, buf_len);
+                    buf_position = 0;
+                    b_position += chunk_size;
+                }
+            }
+
+            return 0;
+        }
+    }
+
+    public static class AES_OutputStream extends OutputStream {
+        private final OutputStream outputStream;
+        private ByteBuffer buf;
+        public AES_OutputStream(OutputStream outputStream, int buf_size) {
+            this.outputStream = outputStream;
+            this.buf = ByteBuffer.allocate(buf_size);
+        }
+
+        @Override
+        public void write(int b) throws IOException {
+            outputStream.write(new byte[]{Integer.valueOf(b).byteValue()});
+        }
+
+        @Override
+        public void write(byte[]b) throws IOException {
+            int buf_len = buf.capacity();
+            for (int start = 0; start < b.length; start += buf_len) {
+                int end;
+                if(b.length - start > buf_len) {
+                    end = start + buf_len;
+                } else {
+                    end = b.length;
+                }
+
+                int chunk_len = end - start;
+                int remaining_size = buf.capacity() - buf.position();
+                if(remaining_size > chunk_len)
+                    buf.put(b, start, chunk_len);
+                else if (remaining_size == chunk_len) {
+                    buf.put(b, start, chunk_len);
+                    outputStream.write(buf.array());
+                    buf = ByteBuffer.allocate(buf.capacity());
+                } else {
+                    int overflow_pos = start + remaining_size;
+                    buf.put(b, start, overflow_pos);
+                    outputStream.write(buf.array());
+                    buf = ByteBuffer.allocate(buf.capacity());
+                    buf.put(b, overflow_pos, chunk_len - overflow_pos);
+                }
+            }
+        }
+
+        @Override
+        public void close() throws IOException {
+            outputStream.write(buf.array());
+            outputStream.close();
+            buf.clear();
+            super.close();
         }
     }
 }
