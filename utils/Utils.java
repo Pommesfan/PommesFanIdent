@@ -1,6 +1,8 @@
 package utils;
 
+import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
+import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.*;
@@ -205,9 +207,13 @@ public class Utils {
         public final int buf_len;
         private byte[] buf;
         private int buf_position = 0;
-        public AES_InputStream(InputStream inputStream, int buf_len) {
+        private Cipher cipher;
+        public AES_InputStream(InputStream inputStream, int buf_len, String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
             this.inputStream = inputStream;
             this.buf_len = buf_len;
+            SecretKeySpec sks = new SecretKeySpec(password.getBytes(), "AES");
+            cipher = Cipher.getInstance("AES/ECB/NoPadding");
+            cipher.init(Cipher.DECRYPT_MODE, sks);
         }
         @Override
         public int read() throws IOException {
@@ -216,11 +222,21 @@ public class Utils {
             return ByteBuffer.wrap(b).getInt();
         }
 
+        private void from_inputstream() {
+            try {
+                inputStream.read(buf, 0, buf_len);
+                buf = cipher.doFinal(buf);
+                buf_position = 0;
+            } catch (IllegalBlockSizeException | BadPaddingException | IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         @Override
         public int read(byte[] b, int off, int len) throws IOException {
             if(buf == null) {
                 buf = new byte[buf_len];
-                inputStream.read(buf, 0, buf_len);
+                from_inputstream();
             }
             int b_position = 0;
 
@@ -235,13 +251,11 @@ public class Utils {
                 } else if (b_remaining == buf_remaining) {
                     System.arraycopy(buf, buf_position, b, b_position, b_remaining);
                     b_position += b_remaining;
-                    inputStream.read(buf, 0, buf_len);
-                    buf_position = 0;
+                    from_inputstream();
                 } else {
                     int chunk_size = buf_len - buf_position;
                     System.arraycopy(buf, buf_position, b, b_position, chunk_size);
-                    inputStream.read(buf, 0, buf_len);
-                    buf_position = 0;
+                    from_inputstream();
                     b_position += chunk_size;
                 }
             }
@@ -254,9 +268,13 @@ public class Utils {
         private final OutputStream outputStream;
         private byte[]buf;
         private int buf_position = 0;
-        public AES_OutputStream(OutputStream outputStream, int buf_size) {
+        private Cipher cipher;
+        public AES_OutputStream(OutputStream outputStream, int buf_size, String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
             this.outputStream = outputStream;
             this.buf = new byte[buf_size];
+            SecretKeySpec sks = new SecretKeySpec(password.getBytes(), "AES");
+            cipher = Cipher.getInstance("AES/ECB/NoPadding");
+            cipher.init(Cipher.ENCRYPT_MODE, sks);
         }
 
         @Override
@@ -265,7 +283,7 @@ public class Utils {
         }
 
         @Override
-        public void write(byte[]b) throws IOException {
+        public void write(byte[]b) {
             int buf_len = buf.length;
             for (int start = 0; start < b.length; start += buf_len) {
                 int end;
@@ -282,21 +300,30 @@ public class Utils {
                     buf_position += chunk_len;
                 } else if (remaining_size == chunk_len) {
                     System.arraycopy(b, start, buf, buf_position, chunk_len);
-                    outputStream.write(buf);
-                    buf_position = 0;
+                    toOutputStream(buf_len);
                 } else {
                     int overflow_pos = start + remaining_size;
                     System.arraycopy(b, start, buf, buf_position, overflow_pos);
-                    outputStream.write(buf);
-                    buf_position = 0;
+                    toOutputStream(buf_len);
                     System.arraycopy(b, overflow_pos, buf, buf_position, chunk_len - overflow_pos);
                 }
             }
         }
 
+        private void toOutputStream(int len) {
+            byte[]tmp = new byte[len];
+            System.arraycopy(buf, 0, tmp, 0, len);
+            try {
+                outputStream.write(cipher.doFinal(tmp));
+                buf_position = 0;
+            } catch (IllegalBlockSizeException | IOException | BadPaddingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
         @Override
         public void close() throws IOException {
-            outputStream.write(buf, 0, buf_position);
+            toOutputStream(buf_position);
             outputStream.close();
             super.close();
         }
