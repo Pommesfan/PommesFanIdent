@@ -175,7 +175,9 @@ public class TUI implements Observer<OutputEvent> {
         String ip = sc.next();
         System.out.println("Portnummer angeben:");
         int port = sc.nextInt();
-        controller.handInPersonalIDtoRemote(id_number, ip, port);
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next();
+        controller.handInPersonalIDtoRemote(id_number, ip, port, password);
     }
 
     private void doShowPublicProfile() throws IOException {
@@ -198,6 +200,8 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println(serverStartedEvent.ip);
             System.out.println("Portnummer:");
             System.out.println(serverStartedEvent.port);
+            System.out.println("Krypto-Passwort:");
+            System.out.println(serverStartedEvent.password);
         } else if (e instanceof OutputEvent.NoSuchProfileEvent evt) {
             if(evt.namePresent)
                 System.out.println("Profil mit der Sequenznummer " + evt.sequence_number + " nicht gespeichert, aber Profilname " + evt.name + " gespeichert");

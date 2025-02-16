@@ -3,9 +3,8 @@ package controller;
 import model.Personal_ID;
 import model.PrivateProfile;
 import model.PublicProfile;
-import utils.Observable;
-import utils.OutputEvent;
-import utils.Utils;
+import utils.*;
+
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -192,11 +191,12 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
+        String password = Utils.getAlphanumeric(16);
         String ip = InetAddress.getLocalHost().getHostAddress();
         ServerSocket serverSocket = new ServerSocket(0);
-        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort()));
+        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         Socket s = serverSocket.accept();
-        InputStream inputStream = new BufferedInputStream(s.getInputStream());
+        InputStream inputStream = new AES_InputStream(s.getInputStream(), 1024, password);
         Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, inputStream, true);
         serverSocket.close();
 
@@ -211,7 +211,7 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void handInPersonalIDtoRemote(String id_number, String ip, int port) throws Exception {
+    public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
         //load personal id
         Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase());
@@ -219,7 +219,7 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
         //hand in
-        OutputStream outputStream = new BufferedOutputStream(s.getOutputStream());
+        OutputStream outputStream = new AES_OutputStream(s.getOutputStream(), 1024, password.toUpperCase());
         personalId.toOutputStream(outputStream, true);
     }
 

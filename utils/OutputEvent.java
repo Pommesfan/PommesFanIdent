@@ -16,9 +16,11 @@ public interface OutputEvent {
     class ServerStartedEvent implements OutputEvent {
         public final String ip;
         public final int port;
-        public ServerStartedEvent(String pIP, int pPort) {
+        public final String password;
+        public ServerStartedEvent(String pIP, int pPort, String pPassword) {
             ip = pIP;
             port = pPort;
+            password = pPassword;
         }
     }
 
