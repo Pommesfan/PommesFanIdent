@@ -285,7 +285,8 @@ public class Utils {
         @Override
         public void write(byte[]b) {
             int buf_len = buf.length;
-            for (int start = 0; start < b.length; start += buf_len) {
+            int start = 0;
+            while(start < b.length) {
                 int end;
                 if(b.length - start > buf_len) {
                     end = start + buf_len;
@@ -298,14 +299,17 @@ public class Utils {
                 if(remaining_size > chunk_len) {
                     System.arraycopy(b, start, buf, buf_position, chunk_len);
                     buf_position += chunk_len;
+                    start += chunk_len;
                 } else if (remaining_size == chunk_len) {
                     System.arraycopy(b, start, buf, buf_position, chunk_len);
                     toOutputStream(buf_len);
+                    start += chunk_len;
                 } else {
                     int overflow_pos = start + remaining_size;
                     System.arraycopy(b, start, buf, buf_position, overflow_pos);
                     toOutputStream(buf_len);
                     System.arraycopy(b, overflow_pos, buf, buf_position, chunk_len - overflow_pos);
+                    start += overflow_pos;
                 }
             }
         }
@@ -323,7 +327,11 @@ public class Utils {
 
         @Override
         public void close() throws IOException {
-            toOutputStream(buf_position);
+            int output_size = buf_position;
+            int rest = 16 - (output_size % 16);
+            if(rest != 16)
+                output_size += rest;
+            toOutputStream(output_size);
             outputStream.close();
             super.close();
         }
