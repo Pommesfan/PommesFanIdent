@@ -315,10 +315,18 @@ public class Utils {
         }
 
         private void toOutputStream(int len) {
-            byte[]tmp = new byte[len];
-            System.arraycopy(buf, 0, tmp, 0, len);
             try {
-                outputStream.write(cipher.doFinal(tmp));
+                if(len == buf.length)
+                    outputStream.write(cipher.doFinal(buf));
+                else {
+                    int output_size = buf_position;
+                    int rest = 16 - (output_size % 16);
+                    if(rest != 16)
+                        output_size += rest;
+                    byte[] tmp = new byte[output_size];
+                    System.arraycopy(buf, 0, tmp, 0, len);
+                    outputStream.write(cipher.doFinal(tmp));
+                }
                 buf_position = 0;
             } catch (IllegalBlockSizeException | IOException | BadPaddingException e) {
                 throw new RuntimeException(e);
@@ -327,11 +335,7 @@ public class Utils {
 
         @Override
         public void close() throws IOException {
-            int output_size = buf_position;
-            int rest = 16 - (output_size % 16);
-            if(rest != 16)
-                output_size += rest;
-            toOutputStream(output_size);
+            toOutputStream(buf_position);
             outputStream.close();
             super.close();
         }
