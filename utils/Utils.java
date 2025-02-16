@@ -206,9 +206,12 @@ public class Utils {
         private final InputStream inputStream;
         public final int buf_len;
         private byte[] buf;
+        private int received_size;
         private int buf_position = 0;
         private Cipher cipher;
         public AES_InputStream(InputStream inputStream, int buf_len, String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+            if (buf_len % 16 != 0)
+                throw new IllegalArgumentException("buf_size of AES_InputStream must be multiple of 16");
             this.inputStream = inputStream;
             this.buf_len = buf_len;
             SecretKeySpec sks = new SecretKeySpec(password.getBytes(), "AES");
@@ -224,7 +227,7 @@ public class Utils {
 
         private void from_inputstream() {
             try {
-                inputStream.read(buf, 0, buf_len);
+                received_size = inputStream.read(buf, 0, buf_len);
                 buf = cipher.doFinal(buf);
                 buf_position = 0;
             } catch (IllegalBlockSizeException | BadPaddingException | IOException e) {
@@ -238,10 +241,12 @@ public class Utils {
                 buf = new byte[buf_len];
                 from_inputstream();
             }
+            if(received_size == -1)
+                return - 1;
             int b_position = 0;
 
             while(b_position < b.length) {
-                int buf_remaining = buf_len - buf_position;
+                int buf_remaining = received_size - buf_position;
                 int b_remaining = b.length - b_position;
 
                 if(b_remaining < buf_remaining) {
@@ -252,11 +257,14 @@ public class Utils {
                     System.arraycopy(buf, buf_position, b, b_position, b_remaining);
                     b_position += b_remaining;
                     from_inputstream();
+                    if(received_size == -1)
+                        return - 1;
                 } else {
-                    int chunk_size = buf_len - buf_position;
-                    System.arraycopy(buf, buf_position, b, b_position, chunk_size);
+                    System.arraycopy(buf, buf_position, b, b_position, buf_remaining);
                     from_inputstream();
-                    b_position += chunk_size;
+                    if(received_size == -1)
+                        return - 1;
+                    b_position += buf_remaining;
                 }
             }
 
@@ -270,6 +278,8 @@ public class Utils {
         private int buf_position = 0;
         private Cipher cipher;
         public AES_OutputStream(OutputStream outputStream, int buf_size, String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+            if (buf_size % 16 != 0)
+                throw new IllegalArgumentException("buf_size of AES_InputStream must be multiple of 16");
             this.outputStream = outputStream;
             this.buf = new byte[buf_size];
             SecretKeySpec sks = new SecretKeySpec(password.getBytes(), "AES");
@@ -319,6 +329,7 @@ public class Utils {
                 if(len == buf.length)
                     outputStream.write(cipher.doFinal(buf));
                 else {
+                    // add zeros to last package, so it becomes multiple of 16 in length
                     int output_size = buf_position;
                     int rest = 16 - (output_size % 16);
                     if(rest != 16)
