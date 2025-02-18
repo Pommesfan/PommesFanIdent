@@ -1,9 +1,14 @@
 package model;
 
 import controller.Controller;
+import utils.AES_InputStream;
+import utils.AES_OutputStream;
 import utils.OutputEvent;
 import utils.Utils;
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 
 public class PublicProfile {
     public final String name;
@@ -22,7 +27,7 @@ public class PublicProfile {
         this.publicKey = publicKey;
     }
 
-    public static PublicProfile loadInternal(Controller controller, String path, String profileName, int sequence_number) throws IOException {
+    public static PublicProfile loadInternal(Controller controller, String path, String profileName, int sequence_number) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if(!Utils.exists(path + profileName)) {
             controller.notifyObservers(new OutputEvent.NoSuchProfileEvent(profileName, sequence_number, false));
             return null;
@@ -34,7 +39,8 @@ public class PublicProfile {
         }
 
         FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
-        Utils.SliceReader sliceReader = new Utils.SliceReader(fis);
+        AES_InputStream aesis = new AES_InputStream(fis, 1024, controller.password);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
 
         String creationDate = profileParams[0];
@@ -42,7 +48,7 @@ public class PublicProfile {
         String[] dynamicAttributes = Utils.sliceStringArray(profileParams, 5, profileParams.length);
 
         byte[] publicKey = sliceReader.next();
-        fis.close();
+        aesis.close();
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
@@ -66,17 +72,18 @@ public class PublicProfile {
         sliceWriter.write(publicKey);
     }
 
-    public void saveInternal(Controller controller, String path) throws IOException {
+    public void saveInternal(Controller controller, String path) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if(Utils.exists(path + name) && Utils.exists(path + name + "/" + sequence_number)) {
             controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
             return;
         }
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
+        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, controller.password);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(publicKey);
-        fos.close();
+        aesos.close();
     }
 
     @Override

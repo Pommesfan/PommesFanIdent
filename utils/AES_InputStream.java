@@ -82,4 +82,10 @@ public class AES_InputStream extends InputStream {
         System.gc();
         return b_position;
     }
+    @Override
+    public void close() throws IOException {
+        inputStream.close();
+        super.close();
+    }
+
 }

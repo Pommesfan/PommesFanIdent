@@ -1,11 +1,15 @@
 package model;
 
 import controller.Controller;
+import utils.AES_InputStream;
+import utils.AES_OutputStream;
 import utils.OutputEvent;
 import utils.Utils;
+
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -112,11 +116,12 @@ public class Personal_ID {
             return null;
         }
         FileInputStream fis = new FileInputStream(location + name);
-        Personal_ID personalId = fromInputStream(controller, created_or_imported, fis, false);
+        AES_InputStream aesis = new AES_InputStream(fis, 1024, controller.password);
+        Personal_ID personalId = fromInputStream(controller, created_or_imported, aesis, false);
         if(personalId == null)
             return null;
-        byte[] personalImage_b = Files.readAllBytes(Paths.get(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath));
-        byte[] handSignature_b = Files.readAllBytes(Paths.get(controller.appDataLocation + Controller.strHandSignatures + personalId.handSignaturePath));
+        byte[] personalImage_b = controller.readAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath);
+        byte[] handSignature_b = controller.readAttachedData(controller.appDataLocation + Controller.strHandSignatures + personalId.handSignaturePath);
         personalId.blob = Optional.of(new BLOB(personalImage_b, handSignature_b));
         return personalId;
     }
@@ -141,7 +146,7 @@ public class Personal_ID {
         outputStream.close();
     }
 
-    public void saveInternal(Controller controller, int created_or_imported) throws IOException, NoSuchMethodException {
+    public void saveInternal(Controller controller, int created_or_imported) throws IOException, NoSuchMethodException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if (blob.isEmpty())
             throw new NoSuchElementException("Optional of BLOB is empty");
         BLOB blob_unwrapped = blob.get();
@@ -161,7 +166,8 @@ public class Personal_ID {
         }
         File f = Utils.createFileAndSubfolder(location + ID_number);
         FileOutputStream fos = new FileOutputStream(f);
-        toOutputStream(fos, false);
+        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, controller.password);
+        toOutputStream(aesos, false);
         controller.saveAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalImagePath, blob_unwrapped.personal_image);
         controller.saveAttachedData(controller.appDataLocation + Controller.strHandSignatures + handSignaturePath, blob_unwrapped.hand_signature);
     }

@@ -4,7 +4,7 @@ import model.Personal_ID;
 import model.PrivateProfile;
 import model.PublicProfile;
 import utils.*;
-
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -30,11 +30,12 @@ public class Controller extends Observable<OutputEvent> {
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
     public final String appDataLocation;
+    public String password = null;
     public Controller(String appDataLocation) {
         this.appDataLocation = appDataLocation;
     }
 
-    public void generateKeyPair(String profileName, int sequence_number, PublicProfile.ValidityPeriod validityPeriod, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException, ParseException {
+    public void generateKeyPair(String profileName, int sequence_number, PublicProfile.ValidityPeriod validityPeriod, String[] dynamicAttributes) throws NoSuchAlgorithmException, IOException, ParseException, NoSuchPaddingException, InvalidKeyException {
         if(!Utils.validateStringDate(validityPeriod.validFrom) || !Utils.validateStringDate(validityPeriod.validUntilForCreation)
                 || !Utils.validateStringDate(validityPeriod.validUntilForCreated)) {
             notifyObservers(new OutputEvent.InvalidDateEvent());
@@ -151,7 +152,7 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException {
+    public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strCreatedProfiles, profileName, sequence_number);
         if(privateProfile == null)
@@ -161,7 +162,7 @@ public class Controller extends Observable<OutputEvent> {
         publicProfile.saveExternal(destination);
     }
 
-    public void importPublicProfile(InputStream inputStream) throws IOException {
+    public void importPublicProfile(InputStream inputStream) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PublicProfile publicProfile = PublicProfile.fromExternal(inputStream);
         publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
     }
@@ -173,11 +174,13 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         FileOutputStream fos = new FileOutputStream(destination);
-        personalId.toOutputStream(fos, true);
+        AES_OutputStream aesos = new AES_OutputStream(fos,1024, password);
+        personalId.toOutputStream(aesos, true);
     }
 
     public void importPersonalID(InputStream inputStream) throws Exception {
-        Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, inputStream, true);
+        AES_InputStream aesis = new AES_InputStream(inputStream, 1024, password);
+        Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, aesis, true);
         if (personalId == null) {
             return;
         }
@@ -223,7 +226,7 @@ public class Controller extends Observable<OutputEvent> {
         personalId.toOutputStream(outputStream, true);
     }
 
-    public void showPublicProfile(String profileName, int sequence) throws IOException {
+    public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PublicProfile profile = PublicProfile.loadInternal(this, appDataLocation + Controller.strImportedPublicProfiles, profileName, sequence);
         if(profile == null) {
             return;
@@ -231,10 +234,21 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.ShowProfileEvent(profile.toString()));
     }
 
-    public void saveAttachedData(String url, byte[] data) throws IOException {
+    public void saveAttachedData(String url, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        fos.write(data);
-        fos.close();
+        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, password);
+        aesos.write(data);
+        aesos.close();
+    }
+
+    public byte[]readAttachedData(String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        File f = new File(url);
+        int len = (int) f.length();
+        FileInputStream fis = new FileInputStream(f);
+        AES_InputStream aesis = new AES_InputStream(fis, 1024, password);
+        byte[]res = new byte[len];
+        aesis.read(res, 0, len);
+        return res;
     }
 }

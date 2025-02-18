@@ -4,10 +4,13 @@ import controller.Controller;
 import model.PublicProfile;
 import utils.Observer;
 import utils.OutputEvent;
+
+import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.Scanner;
@@ -28,6 +31,11 @@ public class TUI implements Observer<OutputEvent> {
     }
 
     public void processUserInput() throws Exception {
+        if(controller.password == null) {
+            System.out.println("Passwort eingeben:");
+            controller.password = sc.next();
+            return;
+        }
         System.out.println(introMessage);
         int mode = sc.nextInt();
         switch (mode) {
@@ -44,7 +52,7 @@ public class TUI implements Observer<OutputEvent> {
         }
     }
 
-    private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException, ParseException {
+    private void doGenerateKeyPair() throws NoSuchAlgorithmException, IOException, ParseException, NoSuchPaddingException, InvalidKeyException {
         System.out.println("Name für Öffentliches Profil:");
         String name = sc.next();
         System.out.println("Folgenummer:");
@@ -112,7 +120,7 @@ public class TUI implements Observer<OutputEvent> {
         controller.checkPersonalID(sc.next());
     }
 
-    private void doImportPublicProfile() throws IOException {
+    private void doImportPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         System.out.println("Öffentliches Profil aus Datei auswählen!");
         JFileChooser fileChooser = new JFileChooser();
         fileChooser.showOpenDialog(null);
@@ -134,7 +142,7 @@ public class TUI implements Observer<OutputEvent> {
         controller.importPersonalID(Files.newInputStream(source.toPath()));
     }
 
-    private void doExportPublicProfile() throws IOException {
+    private void doExportPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         System.out.println("Profilname:");
         String profileName = sc.next();
         System.out.println("Folgenummer Profil:");
@@ -180,7 +188,7 @@ public class TUI implements Observer<OutputEvent> {
         controller.handInPersonalIDtoRemote(id_number, ip, port, password);
     }
 
-    private void doShowPublicProfile() throws IOException {
+    private void doShowPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         System.out.println("Profilname:");
         String profile_name = sc.next();
         System.out.println("Folgenummer Profil:");
