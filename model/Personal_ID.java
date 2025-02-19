@@ -12,7 +12,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
-import static controller.Controller.AES_BUFFER_SIZE;
+import static controller.Controller.*;
 
 public class Personal_ID {
     public final String ID_number;
@@ -67,6 +67,9 @@ public class Personal_ID {
             controller.notifyObservers(new OutputEvent.PersonalIDoutdatedEvent(ID_number));
             return null;
         }
+
+        if(!controller.validateValidityPeriod(publicProfile.validityPeriod, Utils.today()))
+            controller.notifyObservers(new OutputEvent.InvalidDateSequenceEvent());
 
         String name = attributes[5];
         String surname = attributes[6];

@@ -19,7 +19,6 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.ServiceLoader;
 
 public class Controller extends Observable<OutputEvent> {
     public static final int LOAD_FROM_CREATED = 1;
@@ -33,6 +32,9 @@ public class Controller extends Observable<OutputEvent> {
     public static final String strProgramPassword = "ProgramPassword";
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
+    public static final byte[]PROGRAM_WATERMARK = new byte[]{-87, 105, -121, -73, 46, -16, 16, -12, -54, 16, 81, 127, 85, 10, -35, -67};
+    public static final int FILE_TYPE_PROFILE = 1;
+    public static final int FILE_TYPE_ID = 2;
     public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
     private String password = null;
@@ -64,7 +66,7 @@ public class Controller extends Observable<OutputEvent> {
         privateProfile.saveInternal(this, appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
     }
 
-    private boolean validateValidityPeriod(PublicProfile.ValidityPeriod v, String todayDate) throws ParseException {
+    public boolean validateValidityPeriod(PublicProfile.ValidityPeriod v, String todayDate) throws ParseException {
         return Utils.dateAfter(todayDate, v.validFrom, true) &&
                 Utils.dateAfter(v.validFrom, v.validUntilForCreation, false) &&
                 Utils.dateAfter(v.validUntilForCreation, v.validUntilForCreated, false);
@@ -168,6 +170,12 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void importPublicProfile(InputStream inputStream, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        if(!checkProgramWatermark(inputStream)) {
+            return;
+        }
+        if (!checkFileType(inputStream, FILE_TYPE_PROFILE))
+            return;
+
         AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
         PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password);
         if (publicProfile != null)
@@ -181,6 +189,8 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         FileOutputStream fos = new FileOutputStream(destination);
+        fos.write(PROGRAM_WATERMARK);
+        fos.write(Utils.int_to_bytes(FILE_TYPE_ID));
         AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(password.getBytes());
@@ -189,6 +199,11 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void importPersonalID(InputStream inputStream, Controller controller, String password) throws Exception {
+        if(!checkProgramWatermark(inputStream))
+            return;
+        if (!checkFileType(inputStream, FILE_TYPE_ID))
+            return;
+
         AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         byte[]savedPassword = sliceReader.next();
@@ -233,7 +248,7 @@ public class Controller extends Observable<OutputEvent> {
 
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
-        //load personal id
+        // load personal id
         Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase());
         if (personalId == null) {
             return;
@@ -285,5 +300,26 @@ public class Controller extends Observable<OutputEvent> {
             saveAttachedData(url, password_b);
             return true;
         }
+    }
+
+    public boolean checkProgramWatermark(InputStream inputStream) throws IOException {
+        byte[]readedWatermark_b = new byte[16];
+        inputStream.read(readedWatermark_b);
+        if(!Arrays.equals(readedWatermark_b, PROGRAM_WATERMARK)) {
+            notifyObservers(new OutputEvent.FileNotFromHereEvent());
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkFileType(InputStream inputStream, int type) throws IOException {
+        byte[]readedType_b =  new byte[4];
+        inputStream.read(readedType_b);
+        int readedType = Utils.bytes_to_int(readedType_b);
+        if(readedType != type) {
+            notifyObservers(new OutputEvent.WrongFileTypeEvent(readedType));
+            return false;
+        }
+        return true;
     }
 }

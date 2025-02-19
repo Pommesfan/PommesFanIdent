@@ -74,4 +74,13 @@ public interface OutputEvent {
     }
 
     class CryptoPasswordInvalidEvent implements OutputEvent {}
+
+    class FileNotFromHereEvent implements OutputEvent {}
+
+    class WrongFileTypeEvent implements OutputEvent {
+        public final int type;
+        public WrongFileTypeEvent(int type) {
+            this.type = type;
+        }
+    }
 }

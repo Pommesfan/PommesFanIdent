@@ -11,7 +11,7 @@ import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 
-import static controller.Controller.AES_BUFFER_SIZE;
+import static controller.Controller.*;
 
 public class PublicProfile {
     public final String name;
@@ -74,6 +74,8 @@ public class PublicProfile {
 
     public void saveExternal(File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileOutputStream fos = new FileOutputStream(destination);
+        fos.write(PROGRAM_WATERMARK);
+        fos.write(Utils.int_to_bytes(FILE_TYPE_PROFILE));
         AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(password.getBytes());

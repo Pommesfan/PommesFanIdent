@@ -14,6 +14,9 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.Scanner;
 
+import static controller.Controller.FILE_TYPE_ID;
+import static controller.Controller.FILE_TYPE_PROFILE;
+
 public class TUI implements Observer<OutputEvent> {
     public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
             "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
@@ -246,6 +249,17 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " abgelaufen");
         } else if(e instanceof OutputEvent.CryptoPasswordInvalidEvent) {
             System.out.println("Krypto-Passwort ungültig");
+        } else if (e instanceof OutputEvent.FileNotFromHereEvent) {
+            System.out.println("Diese Datei ist nicht von diesem Programm");
+        } else if (e instanceof OutputEvent.WrongFileTypeEvent evt) {
+            System.out.print("Datei beinhaltet ");
+            if(evt.type == FILE_TYPE_PROFILE)
+                System.out.println("ein Profil\n");
+            else if (evt.type == FILE_TYPE_ID) {
+                System.out.println("einen Ausweis\n");
+            } else {
+                throw new RuntimeException("No such FileType");
+            }
         }
     }
 }
