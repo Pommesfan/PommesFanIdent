@@ -30,9 +30,12 @@ public class TUI implements Observer<OutputEvent> {
     }
 
     public void processUserInput() throws Exception {
-        if(controller.password == null) {
+        if(controller.getPassword() == null) {
             System.out.println("Passwort eingeben:");
-            controller.password = sc.next().toUpperCase();
+            if(!controller.setPassword(sc.next().toUpperCase())) {
+                System.out.println("Passwort falsch");
+                System.exit(0);
+            }
             return;
         }
         System.out.println(introMessage);

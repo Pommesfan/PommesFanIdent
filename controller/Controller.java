@@ -10,11 +10,13 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
+import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -27,11 +29,12 @@ public class Controller extends Observable<OutputEvent> {
     public static final String strHandSignatures = "HandSignatures/";
     public static final String strCreatedPersonalIDs = "CreatedPersonalIDs/";
     public static final String strImportedPersonalIDs = "ImportedPersonalIDs/";
+    public static final String strProgramPassword = "ProgramPassword";
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
     public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
-    public String password = null;
+    private String password = null;
     public Controller(String appDataLocation) {
         this.appDataLocation = appDataLocation;
     }
@@ -252,5 +255,22 @@ public class Controller extends Observable<OutputEvent> {
         byte[]res = sliceReader.next();
         aesis.close();
         return res;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public boolean setPassword(String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+        this.password = password;
+        byte[]password_b = password.getBytes();
+        String url = appDataLocation + strProgramPassword;
+        if(Files.exists(Path.of(url))) {
+            byte[]savedPassword = readAttachedData(url);
+            return Arrays.equals(savedPassword, password_b);
+        } else {
+            saveAttachedData(url, password_b);
+            return true;
+        }
     }
 }

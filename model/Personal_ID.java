@@ -117,7 +117,7 @@ public class Personal_ID {
             return null;
         }
         FileInputStream fis = new FileInputStream(location + name);
-        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.password);
+        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.getPassword());
         Personal_ID personalId = fromInputStream(controller, created_or_imported, aesis, false);
         if(personalId == null)
             return null;
@@ -168,7 +168,7 @@ public class Personal_ID {
         }
         File f = Utils.createFileAndSubfolder(location + ID_number);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.password);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.getPassword());
         toOutputStream(aesos, false);
         controller.saveAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalImagePath, blob_unwrapped.personal_image);
         controller.saveAttachedData(controller.appDataLocation + Controller.strHandSignatures + handSignaturePath, blob_unwrapped.hand_signature);
