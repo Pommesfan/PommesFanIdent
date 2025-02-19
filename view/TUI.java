@@ -145,7 +145,7 @@ public class TUI implements Observer<OutputEvent> {
         }
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
-        controller.importPersonalID(Files.newInputStream(source.toPath()), password);
+        controller.importPersonalID(Files.newInputStream(source.toPath()), controller, password);
     }
 
     private void doExportPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -238,12 +238,14 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println("Fehlerhafte Datumsangabe");
         } else if (e instanceof OutputEvent.InvalidDateSequenceEvent) {
             System.out.println("Reihenfolge der Datumsangaben für Profil ungültig");
-        } else if (e instanceof OutputEvent.PersonalIDoutOfValidityPeriod) {
+        } else if (e instanceof OutputEvent.PersonalIDoutOfValidityPeriodEvent) {
             System.out.println("Gültigkeitsdatum von Ausweis passt nicht zu Profil");
         } else if (e instanceof OutputEvent.NoSuchPersonalIDevent evt) {
             System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " nicht gespeichert");
         } else if (e instanceof OutputEvent.PersonalIDoutdatedEvent evt) {
             System.out.println("Ausweis mit der Nummer: " + evt.idNumber + " abgelaufen");
+        } else if(e instanceof OutputEvent.CryptoPasswordInvalidEvent) {
+            System.out.println("Krypto-Passwort ungültig");
         }
     }
 }

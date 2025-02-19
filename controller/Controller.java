@@ -19,6 +19,7 @@ import java.text.ParseException;
 import java.util.Arrays;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.ServiceLoader;
 
 public class Controller extends Observable<OutputEvent> {
     public static final int LOAD_FROM_CREATED = 1;
@@ -100,7 +101,7 @@ public class Controller extends Observable<OutputEvent> {
         // check validity period
         String today = Utils.today();
         if(!checkPersonalIDvalidDate(privateProfile.validityPeriod, today, validUntil)) {
-            notifyObservers(new OutputEvent.PersonalIDoutOfValidityPeriod());
+            notifyObservers(new OutputEvent.PersonalIDoutOfValidityPeriodEvent());
             return;
         }
 
@@ -168,8 +169,9 @@ public class Controller extends Observable<OutputEvent> {
 
     public void importPublicProfile(InputStream inputStream, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
-        PublicProfile publicProfile = PublicProfile.fromExternal(aesis);
-        publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
+        PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password);
+        if (publicProfile != null)
+            publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
     }
 
     public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
@@ -180,12 +182,21 @@ public class Controller extends Observable<OutputEvent> {
 
         FileOutputStream fos = new FileOutputStream(destination);
         AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
-        personalId.toOutputStream(aesos, true);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
+        sliceWriter.write(password.getBytes());
+        personalId.toSliceWriter(sliceWriter, true);
+        aesos.close();
     }
 
-    public void importPersonalID(InputStream inputStream, String password) throws Exception {
+    public void importPersonalID(InputStream inputStream, Controller controller, String password) throws Exception {
         AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
-        Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, aesis, true);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+        byte[]savedPassword = sliceReader.next();
+        if(!Arrays.equals(savedPassword, password.getBytes())) {
+            controller.notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+            return;
+        }
+        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
         if (personalId == null) {
             return;
         }
@@ -204,8 +215,9 @@ public class Controller extends Observable<OutputEvent> {
         ServerSocket serverSocket = new ServerSocket(0);
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         Socket s = serverSocket.accept();
-        InputStream inputStream = new AES_InputStream(s.getInputStream(), AES_BUFFER_SIZE, password);
-        Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, inputStream, true);
+        AES_InputStream aesis = new AES_InputStream(s.getInputStream(), AES_BUFFER_SIZE, password);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
         serverSocket.close();
 
         if (personalId == null) {
@@ -227,8 +239,9 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
         //hand in
-        OutputStream outputStream = new AES_OutputStream(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
-        personalId.toOutputStream(outputStream, true);
+        AES_OutputStream aesos = new AES_OutputStream(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
+        personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
+        aesos.close();
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

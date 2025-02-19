@@ -9,6 +9,7 @@ import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 
 import static controller.Controller.AES_BUFFER_SIZE;
 
@@ -54,8 +55,13 @@ public class PublicProfile {
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
-    public static PublicProfile fromExternal(InputStream inputStream) throws IOException {
+    public static PublicProfile fromExternal(InputStream inputStream, Controller controller, String password) throws IOException {
         Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
+        byte[]savedPassword = sliceReader.next();
+        if(!Arrays.equals(savedPassword, password.getBytes())) {
+            controller.notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+            return null;
+        }
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -63,7 +69,6 @@ public class PublicProfile {
         ValidityPeriod validityPeriod = ValidityPeriod.fromStringArray(profileParams, 3);
         String[] dynamic_attributes = Utils.sliceStringArray(profileParams, 7, profileParams.length);
         byte[] public_profile_b = sliceReader.next();
-        inputStream.close();
         return new PublicProfile(public_profile_name, sequence_number, creationDate, validityPeriod, dynamic_attributes, public_profile_b);
     }
 
@@ -71,6 +76,7 @@ public class PublicProfile {
         FileOutputStream fos = new FileOutputStream(destination);
         AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
+        sliceWriter.write(password.getBytes());
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
         aesos.close();

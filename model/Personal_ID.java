@@ -86,8 +86,7 @@ public class Personal_ID {
         return new Personal_ID(ID_number, publicProfile, created, validUntil, name, surname, birthdate, address, dynamicAttributesValues, personalImagePath, handSignaturePath);
     }
 
-    public static Personal_ID fromInputStream(Controller controller, int created_or_imported_profile, InputStream inputStream, boolean withBlob) throws Exception {
-        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
+    public static Personal_ID fromSliceReader(Controller controller, int created_or_imported_profile, Utils.SliceReader sliceReader, boolean withBlob) throws Exception {
         String[] attributes = Utils.bytesToStringArray(sliceReader.next());
         Personal_ID personalId = Personal_ID.fromString(controller, created_or_imported_profile, attributes);
         if(personalId == null)
@@ -99,7 +98,6 @@ public class Personal_ID {
             byte[] hand_signature = sliceReader.next();
             personalId.blob = Optional.of(new BLOB(personal_image, hand_signature));
         }
-        inputStream.close();
         return personalId;
     }
 
@@ -118,7 +116,8 @@ public class Personal_ID {
         }
         FileInputStream fis = new FileInputStream(location + name);
         AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.getPassword());
-        Personal_ID personalId = fromInputStream(controller, created_or_imported, aesis, false);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+        Personal_ID personalId = fromSliceReader(controller, created_or_imported, sliceReader, false);
         if(personalId == null)
             return null;
         byte[] personalImage_b = controller.readAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath);
@@ -128,8 +127,7 @@ public class Personal_ID {
         return personalId;
     }
 
-    public void toOutputStream(OutputStream outputStream, boolean withBlob) throws IOException {
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(outputStream);
+    public void toSliceWriter(Utils.SliceWriter sliceWriter, boolean withBlob) throws IOException {
         sliceWriter.write(toByte(true));
 
         if(signature.isEmpty())
@@ -145,7 +143,6 @@ public class Personal_ID {
             sliceWriter.write(blob_unwrapped.personal_image);
             sliceWriter.write(blob_unwrapped.hand_signature);
         }
-        outputStream.close();
     }
 
     public void saveInternal(Controller controller, int created_or_imported) throws IOException, NoSuchMethodException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -169,7 +166,8 @@ public class Personal_ID {
         File f = Utils.createFileAndSubfolder(location + ID_number);
         FileOutputStream fos = new FileOutputStream(f);
         AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.getPassword());
-        toOutputStream(aesos, false);
+        toSliceWriter(new Utils.SliceWriter(aesos), false);
+        aesos.close();
         controller.saveAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalImagePath, blob_unwrapped.personal_image);
         controller.saveAttachedData(controller.appDataLocation + Controller.strHandSignatures + handSignaturePath, blob_unwrapped.hand_signature);
     }

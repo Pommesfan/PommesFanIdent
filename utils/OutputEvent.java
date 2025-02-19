@@ -57,7 +57,7 @@ public interface OutputEvent {
 
     class InvalidDateSequenceEvent implements OutputEvent {}
 
-    class PersonalIDoutOfValidityPeriod implements OutputEvent {}
+    class PersonalIDoutOfValidityPeriodEvent implements OutputEvent {}
 
     class NoSuchPersonalIDevent implements OutputEvent{
         public final String idNumber;
@@ -72,4 +72,6 @@ public interface OutputEvent {
             this.idNumber = idNumber;
         }
     }
+
+    class CryptoPasswordInvalidEvent implements OutputEvent {}
 }
