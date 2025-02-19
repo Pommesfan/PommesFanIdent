@@ -68,8 +68,15 @@ public class Personal_ID {
             return null;
         }
 
-        if(!controller.validateValidityPeriod(publicProfile.validityPeriod, Utils.today()))
+        if(!controller.validateValidityPeriod(publicProfile.validityPeriod, Utils.today())) {
             controller.notifyObservers(new OutputEvent.InvalidDateSequenceEvent());
+            return null;
+        }
+
+        if(!controller.checkPersonalIDvalidDate(publicProfile.validityPeriod, Utils.today(), validUntil)) {
+            controller.notifyObservers(new OutputEvent.PersonalIDoutOfValidityPeriodEvent());
+            return null;
+        }
 
         String name = attributes[5];
         String surname = attributes[6];
