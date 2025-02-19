@@ -5,13 +5,14 @@ import utils.AES_InputStream;
 import utils.AES_OutputStream;
 import utils.OutputEvent;
 import utils.Utils;
-
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.NoSuchElementException;
 import java.util.Optional;
+
+import static controller.Controller.AES_BUFFER_SIZE;
 
 public class Personal_ID {
     public final String ID_number;
@@ -116,13 +117,14 @@ public class Personal_ID {
             return null;
         }
         FileInputStream fis = new FileInputStream(location + name);
-        AES_InputStream aesis = new AES_InputStream(fis, 1024, controller.password);
+        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.password);
         Personal_ID personalId = fromInputStream(controller, created_or_imported, aesis, false);
         if(personalId == null)
             return null;
         byte[] personalImage_b = controller.readAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath);
         byte[] handSignature_b = controller.readAttachedData(controller.appDataLocation + Controller.strHandSignatures + personalId.handSignaturePath);
         personalId.blob = Optional.of(new BLOB(personalImage_b, handSignature_b));
+        aesis.close();
         return personalId;
     }
 
@@ -166,7 +168,7 @@ public class Personal_ID {
         }
         File f = Utils.createFileAndSubfolder(location + ID_number);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, controller.password);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.password);
         toOutputStream(aesos, false);
         controller.saveAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalImagePath, blob_unwrapped.personal_image);
         controller.saveAttachedData(controller.appDataLocation + Controller.strHandSignatures + handSignaturePath, blob_unwrapped.hand_signature);

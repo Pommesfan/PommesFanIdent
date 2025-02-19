@@ -10,6 +10,8 @@ import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 
+import static controller.Controller.AES_BUFFER_SIZE;
+
 public class PublicProfile {
     public final String name;
     public final int sequence_number;
@@ -39,7 +41,7 @@ public class PublicProfile {
         }
 
         FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
-        AES_InputStream aesis = new AES_InputStream(fis, 1024, controller.password);
+        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
 
@@ -65,11 +67,13 @@ public class PublicProfile {
         return new PublicProfile(public_profile_name, sequence_number, creationDate, validityPeriod, dynamic_attributes, public_profile_b);
     }
 
-    public void saveExternal(File destination) throws IOException {
+    public void saveExternal(File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileOutputStream fos = new FileOutputStream(destination);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(fos);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
+        aesos.close();
     }
 
     public void saveInternal(Controller controller, String path) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -79,7 +83,7 @@ public class PublicProfile {
         }
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
-        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, controller.password);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(publicKey);

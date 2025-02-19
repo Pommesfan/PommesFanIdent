@@ -5,11 +5,12 @@ import utils.AES_InputStream;
 import utils.AES_OutputStream;
 import utils.OutputEvent;
 import utils.Utils;
-
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+
+import static controller.Controller.AES_BUFFER_SIZE;
 
 public class PrivateProfile extends PublicProfile{
     public final byte[] privateKey;
@@ -25,7 +26,7 @@ public class PrivateProfile extends PublicProfile{
         }
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, controller.password);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(privateKey);
@@ -43,7 +44,7 @@ public class PrivateProfile extends PublicProfile{
             return null;
         }
         FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
-        AES_InputStream aesis = new AES_InputStream(fis, 1024, controller.password);
+        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String created = profileParams[0];

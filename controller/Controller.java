@@ -29,6 +29,7 @@ public class Controller extends Observable<OutputEvent> {
     public static final String strImportedPersonalIDs = "ImportedPersonalIDs/";
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
+    public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
     public String password = null;
     public Controller(String appDataLocation) {
@@ -152,34 +153,35 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void exportPublicProfile(String profileName, int sequence_number, File destination) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    public void exportPublicProfile(String profileName, int sequence_number, File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 this, appDataLocation + strCreatedProfiles, profileName, sequence_number);
         if(privateProfile == null)
             return;
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
-        publicProfile.saveExternal(destination);
+        publicProfile.saveExternal(destination, password);
     }
 
-    public void importPublicProfile(InputStream inputStream) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        PublicProfile publicProfile = PublicProfile.fromExternal(inputStream);
+    public void importPublicProfile(InputStream inputStream, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
+        PublicProfile publicProfile = PublicProfile.fromExternal(aesis);
         publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
     }
 
-    public void exportPersonalID(String personalID_s, File destination) throws Exception {
+    public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
         Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, personalID_s.toUpperCase());
         if (personalId == null) {
             return;
         }
 
         FileOutputStream fos = new FileOutputStream(destination);
-        AES_OutputStream aesos = new AES_OutputStream(fos,1024, password);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
         personalId.toOutputStream(aesos, true);
     }
 
-    public void importPersonalID(InputStream inputStream) throws Exception {
-        AES_InputStream aesis = new AES_InputStream(inputStream, 1024, password);
+    public void importPersonalID(InputStream inputStream, String password) throws Exception {
+        AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
         Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, aesis, true);
         if (personalId == null) {
             return;
@@ -199,7 +201,7 @@ public class Controller extends Observable<OutputEvent> {
         ServerSocket serverSocket = new ServerSocket(0);
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         Socket s = serverSocket.accept();
-        InputStream inputStream = new AES_InputStream(s.getInputStream(), 1024, password);
+        InputStream inputStream = new AES_InputStream(s.getInputStream(), AES_BUFFER_SIZE, password);
         Personal_ID personalId = Personal_ID.fromInputStream(this, LOAD_FROM_IMPORTED, inputStream, true);
         serverSocket.close();
 
@@ -222,7 +224,7 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
         //hand in
-        OutputStream outputStream = new AES_OutputStream(s.getOutputStream(), 1024, password.toUpperCase());
+        OutputStream outputStream = new AES_OutputStream(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
         personalId.toOutputStream(outputStream, true);
     }
 
@@ -237,18 +239,18 @@ public class Controller extends Observable<OutputEvent> {
     public void saveAttachedData(String url, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = new AES_OutputStream(fos, 1024, password);
-        aesos.write(data);
+        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
+        sliceWriter.write(data);
         aesos.close();
     }
 
     public byte[]readAttachedData(String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        File f = new File(url);
-        int len = (int) f.length();
-        FileInputStream fis = new FileInputStream(f);
-        AES_InputStream aesis = new AES_InputStream(fis, 1024, password);
-        byte[]res = new byte[len];
-        aesis.read(res, 0, len);
+        FileInputStream fis = new FileInputStream(url);
+        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, password);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+        byte[]res = sliceReader.next();
+        aesis.close();
         return res;
     }
 }

@@ -4,7 +4,6 @@ import controller.Controller;
 import model.PublicProfile;
 import utils.Observer;
 import utils.OutputEvent;
-
 import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.io.File;
@@ -33,7 +32,7 @@ public class TUI implements Observer<OutputEvent> {
     public void processUserInput() throws Exception {
         if(controller.password == null) {
             System.out.println("Passwort eingeben:");
-            controller.password = sc.next();
+            controller.password = sc.next().toUpperCase();
             return;
         }
         System.out.println(introMessage);
@@ -128,7 +127,9 @@ public class TUI implements Observer<OutputEvent> {
         if(publicProfile == null) {
             return;
         }
-        controller.importPublicProfile(Files.newInputStream(publicProfile.toPath()));
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.importPublicProfile(Files.newInputStream(publicProfile.toPath()), password);
     }
 
     private void doImportPersonalID() throws Exception {
@@ -139,7 +140,9 @@ public class TUI implements Observer<OutputEvent> {
         if(source == null) {
             return;
         }
-        controller.importPersonalID(Files.newInputStream(source.toPath()));
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.importPersonalID(Files.newInputStream(source.toPath()), password);
     }
 
     private void doExportPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -155,7 +158,9 @@ public class TUI implements Observer<OutputEvent> {
         if(res != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        controller.exportPublicProfile(profileName, sequence_number, destination);
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.exportPublicProfile(profileName, sequence_number, destination, password);
     }
 
     private void doExportPersonalID() throws Exception {
@@ -169,7 +174,9 @@ public class TUI implements Observer<OutputEvent> {
         if(res != JFileChooser.APPROVE_OPTION) {
             return;
         }
-        controller.exportPersonalID(id_number, destination);
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.exportPersonalID(id_number, destination, password);
     }
 
     private void doCheckPersonalIDFromRemote() throws Exception {
