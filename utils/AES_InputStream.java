@@ -29,7 +29,7 @@ public class AES_InputStream extends InputStream {
     }
     @Override
     public int read() throws IOException {
-        byte[]b = new byte[1];
+        byte[]b = new byte[4];
         inputStream.read(b, 0, 4);
         return ByteBuffer.wrap(b).getInt();
     }
@@ -45,7 +45,7 @@ public class AES_InputStream extends InputStream {
     }
 
     @Override
-    public int read(byte[] b, int off, int len) throws IOException {
+    public int read(byte[] b, int off, int len) {
         System.gc();
         if(buf == null) {
             buf = new byte[buf_len];
@@ -67,9 +67,7 @@ public class AES_InputStream extends InputStream {
             } else if (b_remaining == buf_remaining) {
                 System.arraycopy(buf, buf_position, b, b_position, b_remaining);
                 b_position += b_remaining;
-                from_inputstream();
-                if(received_size == -1)
-                    return - 1;
+                buf = null; // after flush on other side, receive new data on calling this read()
             } else {
                 System.arraycopy(buf, buf_position, b, b_position, buf_remaining);
                 from_inputstream();
@@ -78,7 +76,6 @@ public class AES_InputStream extends InputStream {
                 b_position += buf_remaining;
             }
         }
-
         System.gc();
         return b_position;
     }

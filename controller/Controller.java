@@ -231,8 +231,26 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         Socket s = serverSocket.accept();
         AES_InputStream aesis = new AES_InputStream(s.getInputStream(), AES_BUFFER_SIZE, password);
+        // check crypto-password
+        OutputStream o = s.getOutputStream();
+        byte[]receivedPassword = new byte[16];
+        aesis.read(receivedPassword, 0, 16);
+        if(!Arrays.equals(receivedPassword, password.getBytes())) {
+            o.write(1);
+            o.close();
+            aesis.close();
+            s.close();
+            notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+            return;
+        }
+        o.write(2);
+        o.flush();
+
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
+        aesis.close();
+        o.close();
+        s.close();
         serverSocket.close();
 
         if (personalId == null) {
@@ -255,8 +273,20 @@ public class Controller extends Observable<OutputEvent> {
         }
         //hand in
         AES_OutputStream aesos = new AES_OutputStream(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
+        aesos.write(password.getBytes());
+        aesos.flush();
+        InputStream i = s.getInputStream();
+        if(i.read() == 1) {
+            notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+            i.close();
+            aesos.close();
+            s.close();
+            return;
+        }
         personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
         aesos.close();
+        i.close();
+        s.close();
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

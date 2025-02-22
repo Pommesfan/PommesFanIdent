@@ -84,13 +84,15 @@ public class AES_OutputStream extends OutputStream {
         }
     }
 
-    public void flush() {
+    @Override
+    public void flush() throws IOException {
         toOutputStream(buf_position);
+        super.flush();
     }
 
     @Override
     public void close() throws IOException {
-        flush();
+        toOutputStream(buf_position);
         outputStream.close();
         super.close();
     }

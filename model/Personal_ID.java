@@ -98,6 +98,8 @@ public class Personal_ID {
 
     public static Personal_ID fromSliceReader(Controller controller, int created_or_imported_profile, Utils.SliceReader sliceReader, boolean withBlob) throws Exception {
         String[] attributes = Utils.bytesToStringArray(sliceReader.next());
+        if(attributes.length == 0)
+            return null;
         Personal_ID personalId = Personal_ID.fromString(controller, created_or_imported_profile, attributes);
         if(personalId == null)
             return null;

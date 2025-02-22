@@ -197,7 +197,7 @@ public class TUI implements Observer<OutputEvent> {
         System.out.println("Portnummer angeben:");
         int port = sc.nextInt();
         System.out.println("Krypto-Passwort:");
-        String password = sc.next();
+        String password = sc.next().toUpperCase();
         controller.handInPersonalIDtoRemote(id_number, ip, port, password);
     }
 
