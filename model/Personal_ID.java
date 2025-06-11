@@ -68,7 +68,7 @@ public class Personal_ID {
             return null;
         }
 
-        if(!controller.validateValidityPeriod(publicProfile.validityPeriod, Utils.today())) {
+        if(!controller.validateValidityPeriod(publicProfile.validityPeriod, publicProfile.validityPeriod.validFrom)) {
             controller.notifyObservers(new OutputEvent.InvalidDateSequenceEvent());
             return null;
         }
