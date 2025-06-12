@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.security.InvalidKeyException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class AES_InputStream extends InputStream {
@@ -17,16 +18,23 @@ public class AES_InputStream extends InputStream {
     private byte[] buf;
     private int received_size;
     private int buf_position = 0;
-    private Cipher cipher;
-    public AES_InputStream(InputStream inputStream, int buf_len, String password) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    private final Cipher cipher;
+    public AES_InputStream(InputStream inputStream, int buf_len, Cipher cipher) throws NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if (buf_len % 16 != 0)
             throw new IllegalArgumentException("buf_size of AES_InputStream must be multiple of 16");
         this.inputStream = inputStream;
         this.buf_len = buf_len;
-        SecretKeySpec sks = new SecretKeySpec(password.getBytes(), "AES");
-        cipher = Cipher.getInstance("AES/ECB/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, sks);
+        this.cipher = cipher;
     }
+
+    public static AES_InputStream from_ecb_with_sha(InputStream inputStream, int buf_size, String password) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {
+        byte[] key = MessageDigest.getInstance("SHA256").digest(password.getBytes());
+        SecretKeySpec sks = new SecretKeySpec(key, "AES");
+        Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, sks);
+        return new AES_InputStream(inputStream, buf_size, cipher);
+    }
+
     @Override
     public int read() throws IOException {
         byte[]b = new byte[4];

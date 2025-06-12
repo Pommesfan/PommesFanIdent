@@ -42,7 +42,7 @@ public class PublicProfile {
         }
 
         FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
-        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, controller.getPassword());
+        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(fis, AES_BUFFER_SIZE, controller.getPassword());
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
 
@@ -76,7 +76,7 @@ public class PublicProfile {
         FileOutputStream fos = new FileOutputStream(destination);
         fos.write(PROGRAM_WATERMARK);
         fos.write(Utils.int_to_bytes(FILE_TYPE_PROFILE));
-        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(password.getBytes());
         sliceWriter.write(toByteArray(true));
@@ -91,7 +91,7 @@ public class PublicProfile {
         }
         File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
         FileOutputStream fos = new FileOutputStream(destination);
-        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, controller.getPassword());
+        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, controller.getPassword());
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(publicKey);

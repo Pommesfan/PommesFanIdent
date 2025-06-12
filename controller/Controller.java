@@ -176,7 +176,7 @@ public class Controller extends Observable<OutputEvent> {
         if (!checkFileType(inputStream, FILE_TYPE_PROFILE))
             return;
 
-        AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
+        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(inputStream, AES_BUFFER_SIZE, password);
         PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password);
         if (publicProfile != null)
             publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
@@ -191,7 +191,7 @@ public class Controller extends Observable<OutputEvent> {
         FileOutputStream fos = new FileOutputStream(destination);
         fos.write(PROGRAM_WATERMARK);
         fos.write(Utils.int_to_bytes(FILE_TYPE_ID));
-        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(password.getBytes());
         personalId.toSliceWriter(sliceWriter, true);
@@ -204,7 +204,7 @@ public class Controller extends Observable<OutputEvent> {
         if (!checkFileType(inputStream, FILE_TYPE_ID))
             return;
 
-        AES_InputStream aesis = new AES_InputStream(inputStream, AES_BUFFER_SIZE, password);
+        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(inputStream, AES_BUFFER_SIZE, password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         byte[]savedPassword = sliceReader.next();
         if(!Arrays.equals(savedPassword, password.getBytes())) {
@@ -230,7 +230,7 @@ public class Controller extends Observable<OutputEvent> {
         ServerSocket serverSocket = new ServerSocket(0);
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         Socket s = serverSocket.accept();
-        AES_InputStream aesis = new AES_InputStream(s.getInputStream(), AES_BUFFER_SIZE, password);
+        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(s.getInputStream(), AES_BUFFER_SIZE, password);
         // check crypto-password
         OutputStream o = s.getOutputStream();
         byte[]receivedPassword = new byte[16];
@@ -272,7 +272,7 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
         //hand in
-        AES_OutputStream aesos = new AES_OutputStream(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
+        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(s.getOutputStream(), AES_BUFFER_SIZE, password.toUpperCase());
         aesos.write(password.getBytes());
         aesos.flush();
         InputStream i = s.getInputStream();
@@ -300,7 +300,7 @@ public class Controller extends Observable<OutputEvent> {
     public void saveAttachedData(String url, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = new AES_OutputStream(fos, AES_BUFFER_SIZE, password);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(data);
         aesos.close();
@@ -308,7 +308,7 @@ public class Controller extends Observable<OutputEvent> {
 
     public byte[]readAttachedData(String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileInputStream fis = new FileInputStream(url);
-        AES_InputStream aesis = new AES_InputStream(fis, AES_BUFFER_SIZE, password);
+        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(fis, AES_BUFFER_SIZE, password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         byte[]res = sliceReader.next();
         aesis.close();
