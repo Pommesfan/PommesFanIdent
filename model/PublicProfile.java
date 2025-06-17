@@ -55,13 +55,10 @@ public class PublicProfile {
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
-    public static PublicProfile fromExternal(InputStream inputStream, Controller controller, String password) throws IOException {
+    public static PublicProfile fromExternal(InputStream inputStream, Controller controller, String password) throws IOException, NoSuchAlgorithmException {
         Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
-        byte[]savedPassword = sliceReader.next();
-        if(!Arrays.equals(savedPassword, password.getBytes())) {
-            controller.notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+        if(!controller.validateCryptoPassword(inputStream, password))
             return null;
-        }
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -78,7 +75,7 @@ public class PublicProfile {
         fos.write(Utils.int_to_bytes(FILE_TYPE_PROFILE));
         AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
-        sliceWriter.write(password.getBytes());
+        aesos.write(Utils.passwordHash(password));
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
         aesos.close();

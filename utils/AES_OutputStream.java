@@ -8,8 +8,8 @@ import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.security.InvalidKeyException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import static utils.Utils.passwordHash;
 
 public class AES_OutputStream extends OutputStream {
     private final OutputStream outputStream;
@@ -25,7 +25,7 @@ public class AES_OutputStream extends OutputStream {
     }
 
     public static AES_OutputStream from_ecb_with_sha(OutputStream outputStream, int buf_size, String password) throws InvalidKeyException, NoSuchPaddingException, NoSuchAlgorithmException {
-        byte[] key = MessageDigest.getInstance("SHA256").digest(password.getBytes());
+        byte[] key = passwordHash(password);
         SecretKeySpec sks = new SecretKeySpec(key, "AES");
         Cipher cipher = Cipher.getInstance("AES/ECB/NoPadding");
         cipher.init(Cipher.ENCRYPT_MODE, sks);

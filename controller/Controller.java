@@ -193,7 +193,7 @@ public class Controller extends Observable<OutputEvent> {
         fos.write(Utils.int_to_bytes(FILE_TYPE_ID));
         AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, password);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
-        sliceWriter.write(password.getBytes());
+        aesos.write(Utils.passwordHash(password));
         personalId.toSliceWriter(sliceWriter, true);
         aesos.close();
     }
@@ -206,11 +206,10 @@ public class Controller extends Observable<OutputEvent> {
 
         AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(inputStream, AES_BUFFER_SIZE, password);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
-        byte[]savedPassword = sliceReader.next();
-        if(!Arrays.equals(savedPassword, password.getBytes())) {
-            controller.notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
+
+        if(!controller.validateCryptoPassword(aesis, password))
             return;
-        }
+
         Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
         if (personalId == null) {
             return;
@@ -321,13 +320,20 @@ public class Controller extends Observable<OutputEvent> {
 
     public boolean setPassword(String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
         this.password = password;
-        byte[]password_b = password.getBytes();
+        byte[]passwordHash = Utils.passwordHash(password);
         String url = appDataLocation + strProgramPassword;
         if(Files.exists(Path.of(url))) {
-            byte[]savedPassword = readAttachedData(url);
-            return Arrays.equals(savedPassword, password_b);
+            FileInputStream fis = new FileInputStream(url);
+            AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(fis, 32, password);
+            byte[]savedPasswordHash = new byte[32];
+            aesis.read(savedPasswordHash);
+            aesis.close();
+            return Arrays.equals(savedPasswordHash, passwordHash);
         } else {
-            saveAttachedData(url, password_b);
+            FileOutputStream fos = new FileOutputStream(Utils.createFileAndSubfolder(url));
+            AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, 32, password);
+            aesos.write(passwordHash);
+            aesos.close();
             return true;
         }
     }
@@ -348,6 +354,16 @@ public class Controller extends Observable<OutputEvent> {
         int readedType = Utils.bytes_to_int(readedType_b);
         if(readedType != type) {
             notifyObservers(new OutputEvent.WrongFileTypeEvent(readedType));
+            return false;
+        }
+        return true;
+    }
+
+    public boolean validateCryptoPassword(InputStream inputStream, String password) throws IOException, NoSuchAlgorithmException {
+        byte[]savedPasswordHash = new byte[32];
+        inputStream.read(savedPasswordHash);
+        if(!Arrays.equals(savedPasswordHash, Utils.passwordHash(password))) {
+            notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
             return false;
         }
         return true;
