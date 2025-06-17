@@ -26,7 +26,7 @@ public class PrivateProfile extends PublicProfile{
         }
         File f = Utils.createFileAndSubfolder(url);
         FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb_with_sha(fos, AES_BUFFER_SIZE, controller.getPassword());
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, controller.getProgramPasswordHash());
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         sliceWriter.write(toByteArray(false));
         sliceWriter.write(privateKey);
@@ -44,7 +44,7 @@ public class PrivateProfile extends PublicProfile{
             return null;
         }
         FileInputStream fis = new FileInputStream(path + profileName + "/" + sequence_number);
-        AES_InputStream aesis = AES_InputStream.from_ecb_with_sha(fis, AES_BUFFER_SIZE, controller.getPassword());
+        AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE, controller.getProgramPasswordHash());
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String created = profileParams[0];
