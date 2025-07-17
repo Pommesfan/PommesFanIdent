@@ -226,43 +226,95 @@ public class Controller extends Observable<OutputEvent> {
         personalId.saveInternal(this, LOAD_FROM_IMPORTED);
     }
 
+    private CheckIDrunner checkIDrunner;
+
+    private class CheckIDrunner {
+        final private Thread t;
+        final private ServerSocket serverSocket;
+        final private byte[]password_hash;
+
+        public CheckIDrunner(ServerSocket serverSocket, byte[]password_hash) {
+            t = new Thread(() -> {
+                try {
+                    routine();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+            });
+            this.serverSocket = serverSocket;
+            this.password_hash = password_hash;
+        }
+
+        private void routine() throws Exception {
+            // check crypto-password
+            Socket s;
+            s = serverSocket.accept();
+            InputStream inputStream = s.getInputStream();
+            if(inputStream.read() == 1) {
+                s.close();
+                serverSocket.close();
+                checkIDrunner = null;
+                notifyObservers(new OutputEvent.CheckIDcancelled());
+                return;
+            }
+
+            OutputStream o = s.getOutputStream();
+            AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
+
+            if(!validateCryptoPassword(aesis, password_hash)) {
+                o.write(1);
+                o.close();
+                aesis.close();
+                s.close();
+                checkIDrunner = null;
+                return;
+            }
+            o.write(2);
+            o.flush();
+
+            Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+            Personal_ID personalId = Personal_ID.fromSliceReader(Controller.this, LOAD_FROM_IMPORTED, sliceReader, true);
+            aesis.close();
+            o.close();
+            s.close();
+            serverSocket.close();
+            checkIDrunner = null;
+
+            if (personalId == null) {
+                return;
+            }
+
+            if (validateSignature(personalId)) {
+                notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
+            } else {
+                notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
+            }
+
+        }
+
+        public void start() {
+            t.start();
+        }
+    }
+
     public void checkPersonalIDFromRemote() throws Exception {
         String password = Utils.getAlphanumeric(16);
         String ip = InetAddress.getLocalHost().getHostAddress();
         ServerSocket serverSocket = new ServerSocket(0);
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
-        Socket s = serverSocket.accept();
         byte[]password_hash = Utils.passwordHash(password);
-        AES_InputStream aesis = AES_InputStream.from_ecb(s.getInputStream(), AES_BUFFER_SIZE, password_hash);
-        // check crypto-password
-        OutputStream o = s.getOutputStream();
-        if(!validateCryptoPassword(aesis, password_hash)) {
-            o.write(1);
-            o.close();
-            aesis.close();
-            s.close();
-            return;
-        }
-        o.write(2);
-        o.flush();
-
-        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
-        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
-        aesis.close();
-        o.close();
-        s.close();
-        serverSocket.close();
-
-        if (personalId == null) {
-            return;
-        }
-
-        if (validateSignature(personalId)) {
-            notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
-        } else {
-            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
-        }
+        checkIDrunner = new CheckIDrunner(serverSocket, password_hash);
+        checkIDrunner.start();
     }
+
+    public void stopCheckIDrunner() throws IOException {
+        if(checkIDrunner == null)
+            return;
+        Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), checkIDrunner.serverSocket.getLocalPort());
+        s.getOutputStream().write(1);
+        checkIDrunner = null;
+    }
+
 
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
@@ -273,7 +325,9 @@ public class Controller extends Observable<OutputEvent> {
         }
         //hand in
         byte[]password_hash = Utils.passwordHash(password);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, password_hash);
+        OutputStream os = s.getOutputStream();
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(os, AES_BUFFER_SIZE, password_hash);
+        os.write(0);
         aesos.write(password_hash);
         aesos.flush();
         InputStream i = s.getInputStream();
@@ -288,6 +342,7 @@ public class Controller extends Observable<OutputEvent> {
         aesos.close();
         i.close();
         s.close();
+        notifyObservers(new OutputEvent.IDhandedInSuccessEvent());
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

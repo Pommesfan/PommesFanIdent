@@ -83,4 +83,8 @@ public interface OutputEvent {
             this.type = type;
         }
     }
+
+    class CheckIDcancelled implements OutputEvent {}
+
+    class IDhandedInSuccessEvent implements OutputEvent {}
 }

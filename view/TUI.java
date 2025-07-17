@@ -25,6 +25,9 @@ public class TUI implements Observer<OutputEvent> {
 
     private final Scanner sc;
     private final Controller controller;
+    final public int NORMAL_TUI_STATE= 0;
+    public final int WAIT_FOR_ID_STATE = 1;
+    private int tui_state = NORMAL_TUI_STATE;
 
     public TUI(Controller controller) {
         this.controller = controller;
@@ -39,21 +42,28 @@ public class TUI implements Observer<OutputEvent> {
                 System.out.println("Passwort falsch");
                 System.exit(0);
             }
+            System.out.println(introMessage);
             return;
         }
-        System.out.println(introMessage);
+
         int mode = sc.nextInt();
-        switch (mode) {
-            case 1: doGenerateKeyPair(); break;
-            case 2: doGenerateID(); break;
-            case 3: doCheckPersonalID(); break;
-            case 4: doExportPublicProfile(); break;
-            case 5: doImportPublicProfile(); break;
-            case 6: doExportPersonalID(); break;
-            case 7: doImportPersonalID(); break;
-            case 8: doCheckPersonalIDFromRemote(); break;
-            case 9: doHandInPersonalIDtoRemote(); break;
-            case 10: doShowPublicProfile(); break;
+
+        if(tui_state == NORMAL_TUI_STATE) {
+            switch (mode) {
+                case 1: doGenerateKeyPair(); break;
+                case 2: doGenerateID(); break;
+                case 3: doCheckPersonalID(); break;
+                case 4: doExportPublicProfile(); break;
+                case 5: doImportPublicProfile(); break;
+                case 6: doExportPersonalID(); break;
+                case 7: doImportPersonalID(); break;
+                case 8: doCheckPersonalIDFromRemote(); break;
+                case 9: doHandInPersonalIDtoRemote(); break;
+                case 10: doShowPublicProfile(); break;
+            }
+        } else if (tui_state == WAIT_FOR_ID_STATE) {
+            if(mode == 1)
+                controller.stopCheckIDrunner();
         }
     }
 
@@ -187,6 +197,8 @@ public class TUI implements Observer<OutputEvent> {
 
     private void doCheckPersonalIDFromRemote() throws Exception {
         controller.checkPersonalIDFromRemote();
+        tui_state = WAIT_FOR_ID_STATE;
+        System.out.println("1 eingeben zum Vorgang abbrechen");
     }
 
     private void doHandInPersonalIDtoRemote() throws Exception {
@@ -260,6 +272,11 @@ public class TUI implements Observer<OutputEvent> {
             } else {
                 throw new RuntimeException("No such FileType");
             }
+        }
+
+        if(!(e instanceof OutputEvent.ServerStartedEvent)) {
+            System.out.println(introMessage);
+            tui_state = NORMAL_TUI_STATE;
         }
     }
 }
