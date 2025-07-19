@@ -11,6 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -64,6 +65,7 @@ public class Controller extends Observable<OutputEvent> {
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, todayDate, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
         privateProfile.saveInternal(this, appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     public boolean validateValidityPeriod(PublicProfile.ValidityPeriod v, String todayDate) throws ParseException {
@@ -125,6 +127,7 @@ public class Controller extends Observable<OutputEvent> {
         personalId.signature = Optional.of(signature_b);
         //Save ID
         personalId.saveInternal(this, LOAD_FROM_CREATED);
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     public boolean checkPersonalIDvalidDate(PublicProfile.ValidityPeriod v, String today, String validUntil) throws ParseException {
@@ -167,6 +170,7 @@ public class Controller extends Observable<OutputEvent> {
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination, password);
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     public void importPublicProfile(InputStream inputStream, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -181,6 +185,7 @@ public class Controller extends Observable<OutputEvent> {
         PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password_hash);
         if (publicProfile != null)
             publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
@@ -198,6 +203,7 @@ public class Controller extends Observable<OutputEvent> {
         aesos.write(password_hash);
         personalId.toSliceWriter(sliceWriter, true);
         aesos.close();
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     public void importPersonalID(InputStream inputStream, Controller controller, String password) throws Exception {
@@ -224,6 +230,7 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        notifyObservers(new OutputEvent.ActionCompletedEvent());
     }
 
     private CheckIDrunner checkIDrunner;
@@ -379,7 +386,7 @@ public class Controller extends Observable<OutputEvent> {
         this.programPasswordHash = Utils.passwordHash(password);
         byte[]passwordHash = Utils.passwordHash(password);
         String url = appDataLocation + strProgramPassword;
-        if(Files.exists(Path.of(url))) {
+        if(Files.exists(Paths.get(url))) {
             FileInputStream fis = new FileInputStream(url);
             AES_InputStream aesis = AES_InputStream.from_ecb(fis, 32, passwordHash);
             byte[]savedPasswordHash = new byte[32];
@@ -416,7 +423,7 @@ public class Controller extends Observable<OutputEvent> {
         return true;
     }
 
-    public boolean validateCryptoPassword(InputStream inputStream, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
+    public boolean validateCryptoPassword(InputStream inputStream, byte[]password_hash) throws IOException {
         byte[]savedPasswordHash = new byte[32];
         inputStream.read(savedPasswordHash);
         if(!Arrays.equals(savedPasswordHash, password_hash)) {
