@@ -51,9 +51,9 @@ public class Personal_ID {
         final String profileName = attributes[1];
         final int sequence_number = Integer.parseInt(attributes[2]);
         if (created_or_imported_profile == Controller.LOAD_FROM_CREATED) {
-            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + Controller.strCreatedProfiles, profileName, sequence_number);
+            publicProfile = PrivateProfile.loadInternal(controller, controller.appDataLocation + Controller.strPrivateProfiles, profileName, sequence_number);
         } else if(created_or_imported_profile == Controller.LOAD_FROM_IMPORTED) {
-            publicProfile = PublicProfile.loadInternal(controller, controller.appDataLocation + Controller.strImportedPublicProfiles, profileName, sequence_number);
+            publicProfile = PublicProfile.loadInternal(controller, controller.appDataLocation + Controller.strPublicProfiles, profileName, sequence_number);
         } else {
             throw new NoSuchMethodException("created_or_imported must be 1 or 2");
         }

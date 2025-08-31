@@ -23,8 +23,8 @@ import java.util.Optional;
 public class Controller extends Observable<OutputEvent> {
     public static final int LOAD_FROM_CREATED = 1;
     public static final int LOAD_FROM_IMPORTED = 2;
-    public static final String strCreatedProfiles = "CreatedProfiles/";
-    public static final String strImportedPublicProfiles = "ImportedPublicProfiles/";
+    public static final String strPrivateProfiles = "PrivateProfiles/";
+    public static final String strPublicProfiles = "PublicProfiles/";
     public static final String strPersonalImages = "PersonalImages/";
     public static final String strHandSignatures = "HandSignatures/";
     public static final String strCreatedPersonalIDs = "CreatedPersonalIDs/";
@@ -33,7 +33,8 @@ public class Controller extends Observable<OutputEvent> {
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
     public static final byte[]PROGRAM_WATERMARK = new byte[]{-87, 105, -121, -73, 46, -16, 16, -12, -54, 16, 81, 127, 85, 10, -35, -67};
-    public static final int FILE_TYPE_PROFILE = 1;
+    public static final int FILE_TYPE_PUBLIC_PROFILE = 1;
+    public static final int FILE_TYPE_PRIVATE_PROFILE = 3;
     public static final int FILE_TYPE_ID = 2;
     public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
@@ -63,7 +64,8 @@ public class Controller extends Observable<OutputEvent> {
 
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, todayDate, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(this, appDataLocation + strCreatedProfiles + profileName + "/" + sequence_number);
+        privateProfile.saveInternal(this, appDataLocation + strPrivateProfiles + profileName + "/" + sequence_number);
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public boolean validateValidityPeriod(PublicProfile.ValidityPeriod v, String todayDate) throws ParseException {
@@ -95,7 +97,7 @@ public class Controller extends Observable<OutputEvent> {
 
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strCreatedProfiles, publicProfileName, sequence_number);
+                this, appDataLocation + strPrivateProfiles, publicProfileName, sequence_number);
         if(privateProfile == null) {
             return;
         }
@@ -125,6 +127,7 @@ public class Controller extends Observable<OutputEvent> {
         personalId.signature = Optional.of(signature_b);
         //Save ID
         personalId.saveInternal(this, LOAD_FROM_CREATED);
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public boolean checkPersonalIDvalidDate(PublicProfile.ValidityPeriod v, String today, String validUntil) throws ParseException {
@@ -161,26 +164,55 @@ public class Controller extends Observable<OutputEvent> {
 
     public void exportPublicProfile(String profileName, int sequence_number, File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strCreatedProfiles, profileName, sequence_number);
+                this, appDataLocation + strPrivateProfiles, profileName, sequence_number);
         if(privateProfile == null)
             return;
         PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
                 privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
         publicProfile.saveExternal(destination, password);
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void importPublicProfile(InputStream inputStream, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         if(!checkProgramWatermark(inputStream)) {
             return;
         }
-        if (!checkFileType(inputStream, FILE_TYPE_PROFILE))
+        if (!checkFileType(inputStream, FILE_TYPE_PUBLIC_PROFILE))
             return;
 
         byte[]password_hash = Utils.passwordHash(password);
         AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
         PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password_hash);
-        if (publicProfile != null)
-            publicProfile.saveInternal(this, appDataLocation + strImportedPublicProfiles);
+        if (publicProfile != null) {
+            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles);
+            notifyObservers(new OutputEvent.DummyEvent());
+        }
+    }
+
+    public void exportPrivateProfile(String profileName, int sequenceNumber, File destination, String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+        PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
+                this, appDataLocation + strPrivateProfiles, profileName, sequenceNumber);
+        if(privateProfile == null)
+            return;
+        privateProfile.saveExternal(destination, password);
+        notifyObservers(new OutputEvent.DummyEvent());
+    }
+
+    public void importPrivateProfile(InputStream inputStream, String password) throws IOException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException {
+        if(!checkProgramWatermark(inputStream)) {
+            return;
+        }
+        if (!checkFileType(inputStream, FILE_TYPE_PRIVATE_PROFILE))
+            return;
+
+        byte[]password_hash = Utils.passwordHash(password);
+        AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
+        PrivateProfile privateProfile = PrivateProfile.fromExternal(aesis, this, password_hash);
+        if (privateProfile != null) {
+            privateProfile.saveInternal(this, appDataLocation + strPrivateProfiles + privateProfile.name +
+                    "/" + privateProfile.sequence_number);
+            notifyObservers(new OutputEvent.DummyEvent());
+        }
     }
 
     public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
@@ -198,6 +230,7 @@ public class Controller extends Observable<OutputEvent> {
         aesos.write(password_hash);
         personalId.toSliceWriter(sliceWriter, true);
         aesos.close();
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void importPersonalID(InputStream inputStream, Controller controller, String password) throws Exception {
@@ -224,6 +257,7 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     private CheckIDrunner checkIDrunner;
@@ -305,6 +339,7 @@ public class Controller extends Observable<OutputEvent> {
         byte[]password_hash = Utils.passwordHash(password);
         checkIDrunner = new CheckIDrunner(serverSocket, password_hash);
         checkIDrunner.start();
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void stopCheckIDrunner() throws IOException {
@@ -313,6 +348,7 @@ public class Controller extends Observable<OutputEvent> {
         Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), checkIDrunner.serverSocket.getLocalPort());
         s.getOutputStream().write(1);
         checkIDrunner = null;
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
 
@@ -346,7 +382,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        PublicProfile profile = PublicProfile.loadInternal(this, appDataLocation + Controller.strImportedPublicProfiles, profileName, sequence);
+        PublicProfile profile = PublicProfile.loadInternal(this, appDataLocation + Controller.strPublicProfiles, profileName, sequence);
         if(profile == null) {
             return;
         }

@@ -53,10 +53,7 @@ public class PublicProfile {
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
-    public static PublicProfile fromExternal(InputStream inputStream, Controller controller, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
-        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
-        if(!controller.validateCryptoPassword(inputStream, password_hash))
-            return null;
+    protected static PublicProfile fromSliceReader(Utils.SliceReader sliceReader, Controller controller, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -67,10 +64,17 @@ public class PublicProfile {
         return new PublicProfile(public_profile_name, sequence_number, creationDate, validityPeriod, dynamic_attributes, public_profile_b);
     }
 
+    public static PublicProfile fromExternal(InputStream inputStream, Controller controller, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
+        if(!controller.validateCryptoPassword(inputStream, password_hash))
+            return null;
+        Utils.SliceReader sliceReader = new Utils.SliceReader(inputStream);
+        return fromSliceReader(sliceReader, controller, password_hash);
+    }
+
     public void saveExternal(File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileOutputStream fos = new FileOutputStream(destination);
         fos.write(PROGRAM_WATERMARK);
-        fos.write(Utils.int_to_bytes(FILE_TYPE_PROFILE));
+        fos.write(Utils.int_to_bytes(FILE_TYPE_PUBLIC_PROFILE));
         byte[]password_hash = Utils.passwordHash(password);
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
@@ -80,12 +84,13 @@ public class PublicProfile {
         aesos.close();
     }
 
-    public void saveInternal(Controller controller, String path) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        if(Utils.exists(path + name) && Utils.exists(path + name + "/" + sequence_number)) {
+    public void saveInternal(Controller controller, String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        String path = url + name + "/" + sequence_number;
+        if(Utils.exists(path + name) && Utils.exists(path)) {
             controller.notifyObservers(new OutputEvent.ProfileAlreadyExistsEvent());
             return;
         }
-        File destination = Utils.createFileAndSubfolder(path + name + "/" + sequence_number);
+        File destination = Utils.createFileAndSubfolder(path);
         FileOutputStream fos = new FileOutputStream(destination);
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, controller.getProgramPasswordHash());
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);

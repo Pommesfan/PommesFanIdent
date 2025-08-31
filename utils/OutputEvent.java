@@ -87,4 +87,6 @@ public interface OutputEvent {
     class CheckIDcancelled implements OutputEvent {}
 
     class IDhandedInSuccessEvent implements OutputEvent {}
+
+    class DummyEvent implements OutputEvent {}
 }

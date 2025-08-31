@@ -14,14 +14,14 @@ import java.security.NoSuchAlgorithmException;
 import java.text.ParseException;
 import java.util.Scanner;
 
-import static controller.Controller.FILE_TYPE_ID;
-import static controller.Controller.FILE_TYPE_PROFILE;
+import static controller.Controller.*;
 
 public class TUI implements Observer<OutputEvent> {
     public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
             "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
             "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
-            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n10: Öffentliches Profil anschauen";
+            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n10: Öffentliches Profil anschauen\n" +
+            "11: Privates Profil exportieren\n12: Privates Profil importieren\n";
 
     private final Scanner sc;
     private final Controller controller;
@@ -60,6 +60,8 @@ public class TUI implements Observer<OutputEvent> {
                 case 8: doCheckPersonalIDFromRemote(); break;
                 case 9: doHandInPersonalIDtoRemote(); break;
                 case 10: doShowPublicProfile(); break;
+                case 11: doExportPrivateProfile(); break;
+                case 12: doImportPrivateProfile(); break;
             }
         } else if (tui_state == WAIT_FOR_ID_STATE) {
             if(mode == 1)
@@ -221,10 +223,41 @@ public class TUI implements Observer<OutputEvent> {
         controller.showPublicProfile(profile_name, sequence);
     }
 
+    private void doExportPrivateProfile() throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+        System.out.println("Profilname:");
+        String profileName = sc.next();
+        System.out.println("Folgenummer Profil:");
+        int sequence_number = sc.nextInt();
+        System.out.println("Zielordner wählen!");
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setSelectedFile(new File(profileName + "-" + sequence_number));
+        int res = fileChooser.showSaveDialog(null);
+        File destination = fileChooser.getSelectedFile();
+        if(res != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.exportPrivateProfile(profileName, sequence_number, destination, password);
+    }
+
+    private void doImportPrivateProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        System.out.println("Öffentliches Profil aus Datei auswählen!");
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.showOpenDialog(null);
+        File privateProfile = fileChooser.getSelectedFile();
+        if(privateProfile == null) {
+            return;
+        }
+        System.out.println("Krypto-Passwort:");
+        String password = sc.next().toUpperCase();
+        controller.importPrivateProfile(Files.newInputStream(privateProfile.toPath()), password);
+    }
+
     @Override
     public void update(OutputEvent e) {
         if(e instanceof OutputEvent.PersonalIDValidEvent) {
-            System.out.println("Ausweis ist korrekt\n");
+            System.out.println("Ausweis ist korrekt");
             System.out.println(((OutputEvent.PersonalIDValidEvent) e).personalIDprintout);
         } else if(e instanceof OutputEvent.PersonalIDInvalidEvent){
             System.out.println("Ausweis ist nicht korrekt\n");
@@ -265,16 +298,19 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println("Diese Datei ist nicht von diesem Programm");
         } else if (e instanceof OutputEvent.WrongFileTypeEvent evt) {
             System.out.print("Datei beinhaltet ");
-            if(evt.type == FILE_TYPE_PROFILE)
-                System.out.println("ein Profil\n");
-            else if (evt.type == FILE_TYPE_ID) {
-                System.out.println("einen Ausweis\n");
+            if(evt.type == FILE_TYPE_PUBLIC_PROFILE)
+                System.out.println("ein öffentliches Profil");
+            else if (evt.type == FILE_TYPE_PRIVATE_PROFILE) {
+                System.out.println("ein privates Profil");
+            } else if (evt.type == FILE_TYPE_ID) {
+                System.out.println("einen Ausweis");
             } else {
                 throw new RuntimeException("No such FileType");
             }
         }
 
         if(!(e instanceof OutputEvent.ServerStartedEvent)) {
+            System.out.println("\n");
             System.out.println(introMessage);
             tui_state = NORMAL_TUI_STATE;
         }
