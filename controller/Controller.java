@@ -11,6 +11,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -415,7 +416,7 @@ public class Controller extends Observable<OutputEvent> {
         this.programPasswordHash = Utils.passwordHash(password);
         byte[]passwordHash = Utils.passwordHash(password);
         String url = appDataLocation + strProgramPassword;
-        if(Files.exists(Path.of(url))) {
+        if(Files.exists(Paths.get(url))) {
             FileInputStream fis = new FileInputStream(url);
             AES_InputStream aesis = AES_InputStream.from_ecb(fis, 32, passwordHash);
             byte[]savedPasswordHash = new byte[32];
@@ -452,7 +453,7 @@ public class Controller extends Observable<OutputEvent> {
         return true;
     }
 
-    public boolean validateCryptoPassword(InputStream inputStream, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
+    public boolean validateCryptoPassword(InputStream inputStream, byte[]password_hash) throws IOException {
         byte[]savedPasswordHash = new byte[32];
         inputStream.read(savedPasswordHash);
         if(!Arrays.equals(savedPasswordHash, password_hash)) {
