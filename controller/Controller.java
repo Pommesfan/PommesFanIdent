@@ -260,8 +260,6 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
-    private CheckIDrunner checkIDrunner;
-
     public void importOverNetwork(String ip, int port, String crypto) throws Exception {
         Socket s = new Socket(ip, port);
         byte[]cryptoHash = Utils.passwordHash(crypto);
@@ -306,24 +304,15 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
-    private class CheckIDrunner {
-        final private Thread t;
-        final private ServerSocket serverSocket;
-        final private byte[]password_hash;
+    private BackgroundRunner backgroundRunner;
 
-        public CheckIDrunner(ServerSocket serverSocket, byte[]password_hash) {
-            t = new Thread(() -> {
-                try {
-                    routine();
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
-                }
-            });
-            this.serverSocket = serverSocket;
-            this.password_hash = password_hash;
+    private class CheckIDrunner extends BackgroundRunner {
+        public CheckIDrunner(ServerSocket serverSocket, byte[] password_hash) {
+            super(serverSocket, password_hash);
         }
 
-        private void routine() throws Exception {
+        @Override
+        protected void routine() throws Exception {
             // check crypto-password
             Socket s;
             s = serverSocket.accept();
@@ -331,7 +320,7 @@ public class Controller extends Observable<OutputEvent> {
             if(inputStream.read() == 1) {
                 s.close();
                 serverSocket.close();
-                checkIDrunner = null;
+                backgroundRunner = null;
                 notifyObservers(new OutputEvent.CheckIDcancelled());
                 return;
             }
@@ -344,7 +333,7 @@ public class Controller extends Observable<OutputEvent> {
                 o.close();
                 aesis.close();
                 s.close();
-                checkIDrunner = null;
+                backgroundRunner = null;
                 return;
             }
             o.write(2);
@@ -356,7 +345,7 @@ public class Controller extends Observable<OutputEvent> {
             o.close();
             s.close();
             serverSocket.close();
-            checkIDrunner = null;
+            backgroundRunner = null;
 
             if (personalId == null) {
                 return;
@@ -367,12 +356,8 @@ public class Controller extends Observable<OutputEvent> {
             } else {
                 notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
             }
-
         }
 
-        public void start() {
-            t.start();
-        }
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
@@ -381,17 +366,17 @@ public class Controller extends Observable<OutputEvent> {
         ServerSocket serverSocket = new ServerSocket(0);
         notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         byte[]password_hash = Utils.passwordHash(password);
-        checkIDrunner = new CheckIDrunner(serverSocket, password_hash);
-        checkIDrunner.start();
+        backgroundRunner = new CheckIDrunner(serverSocket, password_hash);
+        backgroundRunner.start();
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void stopCheckIDrunner() throws IOException {
-        if(checkIDrunner == null)
+        if(backgroundRunner == null)
             return;
-        Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), checkIDrunner.serverSocket.getLocalPort());
+        Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), backgroundRunner.getPort());
         s.getOutputStream().write(1);
-        checkIDrunner = null;
+        backgroundRunner = null;
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
