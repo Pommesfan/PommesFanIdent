@@ -78,4 +78,8 @@ public class PrivateProfile extends PublicProfile{
         sliceWriter.write(privateKey);
         aesos.close();
     }
+
+    public PublicProfile toPublic() {
+        return new PublicProfile(name, sequence_number, created, validityPeriod, dynamicAttributes, publicKey);
+    }
 }

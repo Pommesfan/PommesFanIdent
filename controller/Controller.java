@@ -10,7 +10,6 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.*;
 import java.security.spec.InvalidKeySpecException;
@@ -168,8 +167,8 @@ public class Controller extends Observable<OutputEvent> {
                 this, appDataLocation + strPrivateProfiles, profileName, sequence_number);
         if(privateProfile == null)
             return;
-        PublicProfile publicProfile = new PublicProfile(privateProfile.name, privateProfile.sequence_number,
-                privateProfile.created, privateProfile.validityPeriod, privateProfile.dynamicAttributes, privateProfile.publicKey);
+
+        PublicProfile publicProfile = privateProfile.toPublic();
         publicProfile.saveExternal(destination, password);
         notifyObservers(new OutputEvent.DummyEvent());
     }
@@ -262,6 +261,50 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     private CheckIDrunner checkIDrunner;
+
+    public void importOverNetwork(String ip, int port, String crypto) throws Exception {
+        Socket s = new Socket(ip, port);
+        byte[]cryptoHash = Utils.passwordHash(crypto);
+        AES_InputStream aesis = AES_InputStream.from_ecb(s.getInputStream(), AES_BUFFER_SIZE, cryptoHash);
+
+        if(!checkProgramWatermark(aesis))
+            return;
+
+        if(!validateCryptoPassword(aesis, cryptoHash))
+            return;
+
+        PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
+        publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
+        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
+        if(personalId == null)
+            return;
+
+        if(!validateSignature(personalId)) {
+            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
+            return;
+        }
+        personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        notifyObservers(new OutputEvent.DummyEvent());
+        aesis.close();
+    }
+
+    public void exportOverNetwork(String idNumber) throws Exception {
+        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, idNumber.toUpperCase());
+        if (personalId == null) {
+            return;
+        }
+        ServerSocket serverSocket = new ServerSocket(0);
+        String crypto = Utils.getAlphanumeric(16);
+        notifyObservers(new OutputEvent.ServerStartedEvent(InetAddress.getLocalHost().getHostAddress(), serverSocket.getLocalPort(), crypto));
+        Socket s = serverSocket.accept();
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, Utils.passwordHash(crypto));
+        aesos.write(PROGRAM_WATERMARK);
+        aesos.write(Utils.passwordHash(crypto));
+        personalId.publicProfile.toSliceWriter(new Utils.SliceWriter(aesos));
+        personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
+        aesos.close();
+        notifyObservers(new OutputEvent.DummyEvent());
+    }
 
     private class CheckIDrunner {
         final private Thread t;

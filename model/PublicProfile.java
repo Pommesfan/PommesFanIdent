@@ -53,7 +53,7 @@ public class PublicProfile {
         return new PublicProfile(profileName, sequence_number, creationDate, validityPeriod, dynamicAttributes, publicKey);
     }
 
-    protected static PublicProfile fromSliceReader(Utils.SliceReader sliceReader, Controller controller, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
+    public static PublicProfile fromSliceReader(Utils.SliceReader sliceReader, Controller controller, byte[]password_hash) throws IOException, NoSuchAlgorithmException {
         String[] profileParams = Utils.bytesToStringArray(sliceReader.next());
         String public_profile_name = profileParams[0];
         int sequence_number = Integer.parseInt(profileParams[1]);
@@ -79,9 +79,13 @@ public class PublicProfile {
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         aesos.write(password_hash);
+        toSliceWriter(sliceWriter);
+        aesos.close();
+    }
+
+    public void toSliceWriter(Utils.SliceWriter sliceWriter) throws IOException {
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
-        aesos.close();
     }
 
     public void saveInternal(Controller controller, String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

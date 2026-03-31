@@ -21,7 +21,7 @@ public class TUI implements Observer<OutputEvent> {
             "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
             "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
             "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n10: Öffentliches Profil anschauen\n" +
-            "11: Privates Profil exportieren\n12: Privates Profil importieren\n";
+            "11: Privates Profil exportieren\n12: Privates Profil importieren\n13: Exportieren über Netzwerk\n14: Importieren über Netzwerk\n";
 
     private final Scanner sc;
     private final Controller controller;
@@ -62,6 +62,8 @@ public class TUI implements Observer<OutputEvent> {
                 case 10: doShowPublicProfile(); break;
                 case 11: doExportPrivateProfile(); break;
                 case 12: doImportPrivateProfile(); break;
+                case 13: doExportOverNetwork(); break;
+                case 14: doImportOverNetwork(); break;
             }
         } else if (tui_state == WAIT_FOR_ID_STATE) {
             if(mode == 1)
@@ -252,6 +254,22 @@ public class TUI implements Observer<OutputEvent> {
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
         controller.importPrivateProfile(Files.newInputStream(privateProfile.toPath()), password);
+    }
+
+    private void doImportOverNetwork() throws Exception {
+        System.out.println("IP-Adresse angeben:");
+        String ip = sc.next();
+        System.out.println("Portnummer angeben:");
+        int port = sc.nextInt();
+        System.out.println("Krypto-Passwort:");
+        String crypto = sc.next().toUpperCase();
+        controller.importOverNetwork(ip, port, crypto);
+    }
+
+    private void doExportOverNetwork() throws Exception {
+        System.out.println("Ausweisnummer angeben:");
+        String id_number = sc.next();
+        controller.exportOverNetwork(id_number);
     }
 
     @Override
