@@ -260,50 +260,6 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
-    public void importOverNetwork(String ip, int port, String crypto) throws Exception {
-        Socket s = new Socket(ip, port);
-        byte[]cryptoHash = Utils.passwordHash(crypto);
-        AES_InputStream aesis = AES_InputStream.from_ecb(s.getInputStream(), AES_BUFFER_SIZE, cryptoHash);
-
-        if(!checkProgramWatermark(aesis))
-            return;
-
-        if(!validateCryptoPassword(aesis, cryptoHash))
-            return;
-
-        PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
-        publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
-        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
-        if(personalId == null)
-            return;
-
-        if(!validateSignature(personalId)) {
-            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
-            return;
-        }
-        personalId.saveInternal(this, LOAD_FROM_IMPORTED);
-        notifyObservers(new OutputEvent.DummyEvent());
-        aesis.close();
-    }
-
-    public void exportOverNetwork(String idNumber) throws Exception {
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, idNumber.toUpperCase());
-        if (personalId == null) {
-            return;
-        }
-        ServerSocket serverSocket = new ServerSocket(0);
-        String crypto = Utils.getAlphanumeric(16);
-        notifyObservers(new OutputEvent.ServerStartedEvent(InetAddress.getLocalHost().getHostAddress(), serverSocket.getLocalPort(), crypto));
-        Socket s = serverSocket.accept();
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, Utils.passwordHash(crypto));
-        aesos.write(PROGRAM_WATERMARK);
-        aesos.write(Utils.passwordHash(crypto));
-        personalId.publicProfile.toSliceWriter(new Utils.SliceWriter(aesos));
-        personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
-        aesos.close();
-        notifyObservers(new OutputEvent.DummyEvent());
-    }
-
     private BackgroundRunner backgroundRunner;
 
     private class CheckIDrunner extends BackgroundRunner {
@@ -330,7 +286,6 @@ public class Controller extends Observable<OutputEvent> {
 
             if(!validateCryptoPassword(aesis, password_hash)) {
                 o.write(1);
-                o.close();
                 aesis.close();
                 s.close();
                 backgroundRunner = null;
@@ -342,7 +297,6 @@ public class Controller extends Observable<OutputEvent> {
             Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
             Personal_ID personalId = Personal_ID.fromSliceReader(Controller.this, LOAD_FROM_IMPORTED, sliceReader, true);
             aesis.close();
-            o.close();
             s.close();
             serverSocket.close();
             backgroundRunner = null;
@@ -357,7 +311,6 @@ public class Controller extends Observable<OutputEvent> {
                 notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
             }
         }
-
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
@@ -370,16 +323,6 @@ public class Controller extends Observable<OutputEvent> {
         backgroundRunner.start();
         notifyObservers(new OutputEvent.DummyEvent());
     }
-
-    public void stopCheckIDrunner() throws IOException {
-        if(backgroundRunner == null)
-            return;
-        Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), backgroundRunner.getPort());
-        s.getOutputStream().write(1);
-        backgroundRunner = null;
-        notifyObservers(new OutputEvent.DummyEvent());
-    }
-
 
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
@@ -408,6 +351,85 @@ public class Controller extends Observable<OutputEvent> {
         i.close();
         s.close();
         notifyObservers(new OutputEvent.IDhandedInSuccessEvent());
+    }
+
+    private class ExportIDrunner extends BackgroundRunner {
+        private String idNumber;
+        public ExportIDrunner(ServerSocket serverSocket, byte[] password_hash, String idNumber) {
+            super(serverSocket, password_hash);
+            this.idNumber = idNumber.toUpperCase();
+        }
+
+        @Override
+        protected void routine() throws Exception {
+            Socket s = serverSocket.accept();
+            InputStream inputStream = s.getInputStream();
+            if(inputStream.read() == 1) {
+                s.close();
+                serverSocket.close();
+                backgroundRunner = null;
+                notifyObservers(new OutputEvent.DummyEvent());
+                return;
+            }
+            Personal_ID personalId = Personal_ID.loadInternal(Controller.this, LOAD_FROM_CREATED, idNumber);
+            if (personalId == null) {
+                return;
+            }
+
+            AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, password_hash);
+            aesos.write(PROGRAM_WATERMARK);
+            aesos.write(password_hash);
+            personalId.publicProfile.toSliceWriter(new Utils.SliceWriter(aesos));
+            personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
+            aesos.close();
+            notifyObservers(new OutputEvent.DummyEvent());
+        }
+    }
+
+    public void importOverNetwork(String ip, int port, String crypto) throws Exception {
+        Socket s = new Socket(ip, port);
+        s.getOutputStream().write(0);
+        byte[]cryptoHash = Utils.passwordHash(crypto);
+        AES_InputStream aesis = AES_InputStream.from_ecb(s.getInputStream(), AES_BUFFER_SIZE, cryptoHash);
+
+        if(!checkProgramWatermark(aesis))
+            return;
+
+        if(!validateCryptoPassword(aesis, cryptoHash))
+            return;
+
+        PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
+        publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
+        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
+        if(personalId == null)
+            return;
+
+        if(!validateSignature(personalId)) {
+            notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
+            return;
+        }
+        personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        notifyObservers(new OutputEvent.DummyEvent());
+        aesis.close();
+    }
+
+    public void exportOverNetwork(String idNumber) throws Exception {
+        String password = Utils.getAlphanumeric(16);
+        String ip = InetAddress.getLocalHost().getHostAddress();
+        ServerSocket serverSocket = new ServerSocket(0);
+        byte[]password_hash = Utils.passwordHash(password);
+        backgroundRunner = new ExportIDrunner(serverSocket, password_hash, idNumber);
+        backgroundRunner.start();
+        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
+    }
+
+    public void stopBackgroundRunner() throws IOException {
+        if(backgroundRunner == null)
+            return;
+        Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), backgroundRunner.getPort());
+        s.getOutputStream().write(1);
+        backgroundRunner = null;
+        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

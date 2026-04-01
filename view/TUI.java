@@ -25,7 +25,7 @@ public class TUI implements Observer<OutputEvent> {
 
     private final Scanner sc;
     private final Controller controller;
-    final public int NORMAL_TUI_STATE= 0;
+    final public int NORMAL_TUI_STATE = 0;
     public final int WAIT_FOR_ID_STATE = 1;
     private int tui_state = NORMAL_TUI_STATE;
 
@@ -67,7 +67,7 @@ public class TUI implements Observer<OutputEvent> {
             }
         } else if (tui_state == WAIT_FOR_ID_STATE) {
             if(mode == 1)
-                controller.stopCheckIDrunner();
+                controller.stopBackgroundRunner();
         }
     }
 
@@ -269,6 +269,7 @@ public class TUI implements Observer<OutputEvent> {
     private void doExportOverNetwork() throws Exception {
         System.out.println("Ausweisnummer angeben:");
         String id_number = sc.next();
+        tui_state = WAIT_FOR_ID_STATE;
         controller.exportOverNetwork(id_number);
     }
 
