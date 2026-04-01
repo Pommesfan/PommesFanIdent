@@ -271,6 +271,7 @@ public class TUI implements Observer<OutputEvent> {
         String id_number = sc.next();
         tui_state = WAIT_FOR_ID_STATE;
         controller.exportOverNetwork(id_number);
+        System.out.println("1 eingeben zum Vorgang abbrechen");
     }
 
     @Override

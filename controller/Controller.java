@@ -317,11 +317,10 @@ public class Controller extends Observable<OutputEvent> {
         String password = Utils.getAlphanumeric(16);
         String ip = InetAddress.getLocalHost().getHostAddress();
         ServerSocket serverSocket = new ServerSocket(0);
-        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
         byte[]password_hash = Utils.passwordHash(password);
         backgroundRunner = new CheckIDrunner(serverSocket, password_hash);
         backgroundRunner.start();
-        notifyObservers(new OutputEvent.DummyEvent());
+        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
     }
 
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
@@ -429,7 +428,6 @@ public class Controller extends Observable<OutputEvent> {
         Socket s = new Socket(InetAddress.getLocalHost().getHostAddress(), backgroundRunner.getPort());
         s.getOutputStream().write(1);
         backgroundRunner = null;
-        notifyObservers(new OutputEvent.DummyEvent());
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
