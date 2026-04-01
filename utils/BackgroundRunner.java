@@ -1,13 +1,24 @@
 package utils;
 
+import controller.Controller;
+import jdk.jshell.execution.Util;
+
+import java.io.IOException;
+import java.net.InetAddress;
 import java.net.ServerSocket;
+import java.security.NoSuchAlgorithmException;
 
 public abstract class BackgroundRunner {
     final private Thread t;
     final protected ServerSocket serverSocket;
-    final protected byte[]password_hash;
+    final protected byte[] crypto_hash;
 
-    public BackgroundRunner(ServerSocket serverSocket, byte[]password_hash) {
+    public BackgroundRunner(Controller c) throws NoSuchAlgorithmException, IOException {
+        serverSocket = new ServerSocket(0);
+        String crypto = Utils.getAlphanumeric(16);
+        crypto_hash = Utils.passwordHash(crypto);
+        String ip = InetAddress.getLocalHost().getHostAddress();
+        c.notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), crypto));
         t = new Thread(() -> {
             try {
                 routine();
@@ -15,8 +26,6 @@ public abstract class BackgroundRunner {
                 throw new RuntimeException(e);
             }
         });
-        this.serverSocket = serverSocket;
-        this.password_hash = password_hash;
     }
 
     protected abstract void routine() throws Exception;

@@ -7,7 +7,6 @@ import utils.*;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.file.Files;
 import java.nio.file.Paths;
@@ -263,8 +262,8 @@ public class Controller extends Observable<OutputEvent> {
     private BackgroundRunner backgroundRunner;
 
     private class CheckIDrunner extends BackgroundRunner {
-        public CheckIDrunner(ServerSocket serverSocket, byte[] password_hash) {
-            super(serverSocket, password_hash);
+        public CheckIDrunner() throws NoSuchAlgorithmException, IOException {
+            super(Controller.this);
         }
 
         @Override
@@ -282,9 +281,9 @@ public class Controller extends Observable<OutputEvent> {
             }
 
             OutputStream o = s.getOutputStream();
-            AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
+            AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, crypto_hash);
 
-            if(!validateCryptoPassword(aesis, password_hash)) {
+            if(!validateCryptoPassword(aesis, crypto_hash)) {
                 o.write(1);
                 aesis.close();
                 s.close();
@@ -314,13 +313,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void checkPersonalIDFromRemote() throws Exception {
-        String password = Utils.getAlphanumeric(16);
-        String ip = InetAddress.getLocalHost().getHostAddress();
-        ServerSocket serverSocket = new ServerSocket(0);
-        byte[]password_hash = Utils.passwordHash(password);
-        backgroundRunner = new CheckIDrunner(serverSocket, password_hash);
+        backgroundRunner = new CheckIDrunner();
         backgroundRunner.start();
-        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
     }
 
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
@@ -353,9 +347,9 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     private class ExportIDrunner extends BackgroundRunner {
-        private String idNumber;
-        public ExportIDrunner(ServerSocket serverSocket, byte[] password_hash, String idNumber) {
-            super(serverSocket, password_hash);
+        private final String idNumber;
+        public ExportIDrunner(String idNumber) throws NoSuchAlgorithmException, IOException {
+            super(Controller.this);
             this.idNumber = idNumber.toUpperCase();
         }
 
@@ -375,9 +369,9 @@ public class Controller extends Observable<OutputEvent> {
                 return;
             }
 
-            AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, password_hash);
+            AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, crypto_hash);
             aesos.write(PROGRAM_WATERMARK);
-            aesos.write(password_hash);
+            aesos.write(crypto_hash);
             personalId.publicProfile.toSliceWriter(new Utils.SliceWriter(aesos));
             personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
             aesos.close();
@@ -413,13 +407,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void exportOverNetwork(String idNumber) throws Exception {
-        String password = Utils.getAlphanumeric(16);
-        String ip = InetAddress.getLocalHost().getHostAddress();
-        ServerSocket serverSocket = new ServerSocket(0);
-        byte[]password_hash = Utils.passwordHash(password);
-        backgroundRunner = new ExportIDrunner(serverSocket, password_hash, idNumber);
+        backgroundRunner = new ExportIDrunner(idNumber);
         backgroundRunner.start();
-        notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), password));
     }
 
     public void stopBackgroundRunner() throws IOException {
