@@ -411,13 +411,15 @@ public class Controller extends Observable<OutputEvent> {
             return;
 
         PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
-        PublicProfile saved = PublicProfile.loadInternal(
-                this, appDataLocation + strPublicProfiles, publicProfile.name, publicProfile.sequence_number);
-        if(saved == null)
-            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
-        else if(!saved.equals(publicProfile)) {
+        if(Files.exists(Paths.get(appDataLocation + strPublicProfiles + publicProfile.name + "/" + publicProfile.sequence_number))) {
+            PublicProfile saved = PublicProfile.loadInternal(
+                    this, appDataLocation + strPublicProfiles, publicProfile.name, publicProfile.sequence_number);
+            if(!saved.equals(publicProfile)) {
                 notifyObservers(new OutputEvent.OtherProfileFoundEvent());
                 return;
+            }
+        } else {
+            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
         }
 
         Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
