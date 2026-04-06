@@ -150,7 +150,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void checkPersonalID(String id_number) throws Exception {
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase());
+        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
         if(personalId == null) {
             return;
         }
@@ -215,7 +215,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, personalID_s.toUpperCase());
+        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, personalID_s.toUpperCase(), true);
         if (personalId == null) {
             return;
         }
@@ -271,7 +271,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void deleteID(String idNumber) throws Exception {
-        Personal_ID id = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, idNumber);
+        Personal_ID id = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, idNumber, true);
         if(id == null)
             return;
         //Files.delete(Paths.get(appDataLocation + strPersonalImages + id.personalImagePath));
@@ -340,7 +340,7 @@ public class Controller extends Observable<OutputEvent> {
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
         // load personal id
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase());
+        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
         if (personalId == null) {
             return;
         }
@@ -384,7 +384,7 @@ public class Controller extends Observable<OutputEvent> {
                 notifyObservers(new OutputEvent.DummyEvent());
                 return;
             }
-            Personal_ID personalId = Personal_ID.loadInternal(Controller.this, LOAD_FROM_CREATED, idNumber);
+            Personal_ID personalId = Personal_ID.loadInternal(Controller.this, LOAD_FROM_CREATED, idNumber, true);
             if (personalId == null) {
                 return;
             }

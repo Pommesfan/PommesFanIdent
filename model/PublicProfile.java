@@ -76,7 +76,7 @@ public class PublicProfile {
     public static boolean isIDaggregated(Controller controller, String name, int sequenceNumber) throws Exception {
         File folder = new File(controller.appDataLocation + strImportedPersonalIDs);
         for(String idNumber: Objects.requireNonNull(folder.list())) {
-            Personal_ID personalId = Personal_ID.loadInternal(controller, LOAD_FROM_IMPORTED, idNumber);
+            Personal_ID personalId = Personal_ID.loadInternal(controller, LOAD_FROM_IMPORTED, idNumber, false);
             assert personalId != null;
             PublicProfile profile = personalId.publicProfile;
             if(profile.name.equals(name) && profile.sequence_number == sequenceNumber)
