@@ -88,5 +88,7 @@ public interface OutputEvent {
 
     class IDhandedInSuccessEvent implements OutputEvent {}
 
+    class IDaggregatedEvent implements OutputEvent {}
+
     class DummyEvent implements OutputEvent {}
 }

@@ -261,6 +261,25 @@ public class Controller extends Observable<OutputEvent> {
 
     private BackgroundRunner backgroundRunner;
 
+    public void deletePublicProfile(String name, int sequenceNumber) throws Exception {
+        if(PublicProfile.isIDaggregated(this, name, sequenceNumber))
+            notifyObservers(new OutputEvent.IDaggregatedEvent());
+        else {
+            Files.delete(Paths.get(appDataLocation + strPublicProfiles + name + "/" + sequenceNumber));
+            notifyObservers(new OutputEvent.DummyEvent());
+        }
+    }
+
+    public void deleteID(String idNumber) throws Exception {
+        Personal_ID id = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, idNumber);
+        if(id == null)
+            return;
+        //Files.delete(Paths.get(appDataLocation + strPersonalImages + id.personalImagePath));
+        //Files.delete(Paths.get(appDataLocation + strHandSignatures + id.handSignaturePath));
+        Files.delete(Paths.get(appDataLocation + strImportedPersonalIDs + idNumber));
+        notifyObservers(new OutputEvent.DummyEvent());
+    }
+
     private class CheckIDrunner extends BackgroundRunner {
         public CheckIDrunner() throws NoSuchAlgorithmException, IOException {
             super(Controller.this);
@@ -288,6 +307,7 @@ public class Controller extends Observable<OutputEvent> {
                 aesis.close();
                 s.close();
                 backgroundRunner = null;
+                notifyObservers(new OutputEvent.DummyEvent());
                 return;
             }
             o.write(2);

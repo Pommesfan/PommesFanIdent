@@ -20,8 +20,9 @@ public class TUI implements Observer<OutputEvent> {
     public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
             "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
             "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
-            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n10: Öffentliches Profil anschauen\n" +
-            "11: Privates Profil exportieren\n12: Privates Profil importieren\n13: Exportieren über Netzwerk\n14: Importieren über Netzwerk\n";
+            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n" +
+            "10: Öffentliches Profil anschauen\n11: Privates Profil exportieren\n12: Privates Profil importieren\n" +
+            "13: Exportieren über Netzwerk\n14: Importieren über Netzwerk\n15: Importiertes Profil löschen\n16: Ausweis löschen\n";
 
     private final Scanner sc;
     private final Controller controller;
@@ -64,6 +65,8 @@ public class TUI implements Observer<OutputEvent> {
                 case 12: doImportPrivateProfile(); break;
                 case 13: doExportOverNetwork(); break;
                 case 14: doImportOverNetwork(); break;
+                case 15: doDeletePublicProfile(); break;
+                case 16: doDeleteID(); break;
             }
         } else if (tui_state == WAIT_FOR_ID_STATE) {
             if(mode == 1)
@@ -274,6 +277,20 @@ public class TUI implements Observer<OutputEvent> {
         System.out.println("1 eingeben zum Vorgang abbrechen");
     }
 
+    private void doDeletePublicProfile() throws Exception {
+        System.out.println("Öffentliches Profil auswählen");
+        String profileName = sc.next();
+        System.out.println("Folgenummer Profil:");
+        int sequence_number = sc.nextInt();
+        controller.deletePublicProfile(profileName, sequence_number);
+    }
+
+    private void doDeleteID() throws Exception {
+        System.out.println("Ausweisnummer angeben:");
+        String id_number = sc.next().toUpperCase();
+        controller.deleteID(id_number);
+    }
+
     @Override
     public void update(OutputEvent e) {
         if(e instanceof OutputEvent.PersonalIDValidEvent) {
@@ -327,6 +344,8 @@ public class TUI implements Observer<OutputEvent> {
             } else {
                 throw new RuntimeException("No such FileType");
             }
+        } else if(e instanceof OutputEvent.IDaggregatedEvent) {
+            System.out.println("Diesem Profil ist noch ein Ausweis zugeordnet");
         }
 
         if(!(e instanceof OutputEvent.ServerStartedEvent)) {
