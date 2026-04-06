@@ -91,4 +91,6 @@ public interface OutputEvent {
     class IDaggregatedEvent implements OutputEvent {}
 
     class DummyEvent implements OutputEvent {}
+
+    class OtherProfileFoundEvent implements OutputEvent {}
 }

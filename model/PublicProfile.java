@@ -9,6 +9,7 @@ import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import java.util.Objects;
 
 import static controller.Controller.*;
@@ -168,6 +169,14 @@ public class PublicProfile {
                     '\n';
         }
 
+        @Override
+        public boolean equals(Object obj) {
+            if(!(obj instanceof ValidityPeriod v))
+                return false;
+            return validFrom.equals(v.validFrom) && validUntilForCreation.equals(v.validUntilForCreation) &&
+                    validUntilForCreated.equals(v.validUntilForCreated) && maxValidDays == v.maxValidDays;
+        }
+
         public byte[] toByteArray() throws IOException {
             Utils.LineWriter lineWriter = new Utils.LineWriter();
             lineWriter.write(validFrom);
@@ -180,5 +189,14 @@ public class PublicProfile {
         public static ValidityPeriod fromStringArray(String[]s, int start) {
             return new ValidityPeriod(s[start], s[1 + start], s[2 + start], Integer.parseInt(s[3 + start]));
         }
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof PublicProfile p))
+            return false;
+        return name.equals(p.name) && sequence_number == p.sequence_number && created.equals(p.created) &&
+                validityPeriod.equals(p.validityPeriod) && Arrays.equals(dynamicAttributes, p.dynamicAttributes) &&
+                Arrays.equals(publicKey, p.publicKey);
     }
 }

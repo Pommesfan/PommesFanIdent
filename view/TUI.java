@@ -346,6 +346,8 @@ public class TUI implements Observer<OutputEvent> {
             }
         } else if(e instanceof OutputEvent.IDaggregatedEvent) {
             System.out.println("Diesem Profil ist noch ein Ausweis zugeordnet");
+        } else if(e instanceof OutputEvent.OtherProfileFoundEvent) {
+            System.out.println("Anderes Profil mit dem selben Namen und Folgenummer gespeichert");
         }
 
         if(!(e instanceof OutputEvent.ServerStartedEvent)) {

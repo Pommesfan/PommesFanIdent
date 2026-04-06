@@ -288,8 +288,7 @@ public class Controller extends Observable<OutputEvent> {
         @Override
         protected void routine() throws Exception {
             // check crypto-password
-            Socket s;
-            s = serverSocket.accept();
+            Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {
                 s.close();
@@ -412,7 +411,15 @@ public class Controller extends Observable<OutputEvent> {
             return;
 
         PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
-        publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
+        PublicProfile saved = PublicProfile.loadInternal(
+                this, appDataLocation + strPublicProfiles, publicProfile.name, publicProfile.sequence_number);
+        if(saved == null)
+            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
+        else if(!saved.equals(publicProfile)) {
+                notifyObservers(new OutputEvent.OtherProfileFoundEvent());
+                return;
+        }
+
         Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
         if(personalId == null)
             return;
