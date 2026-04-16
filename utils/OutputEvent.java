@@ -84,6 +84,13 @@ public interface OutputEvent {
         }
     }
 
+    class WrongConnectionPurposeTypeEvent implements OutputEvent {
+        public final int type;
+        public WrongConnectionPurposeTypeEvent(int type) {
+            this.type = type;
+        }
+    }
+
     class CheckIDcancelled implements OutputEvent {}
 
     class IDhandedInSuccessEvent implements OutputEvent {}

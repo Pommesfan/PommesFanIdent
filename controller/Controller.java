@@ -35,6 +35,8 @@ public class Controller extends Observable<OutputEvent> {
     public static final int FILE_TYPE_PUBLIC_PROFILE = 1;
     public static final int FILE_TYPE_PRIVATE_PROFILE = 3;
     public static final int FILE_TYPE_ID = 2;
+    public static final int CON_PURPOSE_IMPORT = 4;
+    public static final int CON_PURPOSE_CHECK_ID = 5;
     public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
     private byte[] programPasswordHash = null;
@@ -287,7 +289,6 @@ public class Controller extends Observable<OutputEvent> {
 
         @Override
         protected void routine() throws Exception {
-            // check crypto-password
             Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {
@@ -299,21 +300,24 @@ public class Controller extends Observable<OutputEvent> {
             }
 
             OutputStream o = s.getOutputStream();
-            AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, crypto_hash);
+            o.write(PROGRAM_WATERMARK);
+            o.write(CON_PURPOSE_CHECK_ID);
+            AES_OutputStream aesos = AES_OutputStream.from_ecb(o, AES_BUFFER_SIZE, crypto_hash);
+            aesos.write(crypto_hash);
+            aesos.flush();
 
-            if(!validateCryptoPassword(aesis, crypto_hash)) {
-                o.write(1);
-                aesis.close();
+            if(inputStream.read() == 1) {
                 s.close();
+                serverSocket.close();
                 backgroundRunner = null;
-                notifyObservers(new OutputEvent.DummyEvent());
+                notifyObservers(new OutputEvent.CheckIDcancelled());
                 return;
             }
-            o.write(2);
-            o.flush();
 
+            AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, crypto_hash);
             Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
             Personal_ID personalId = Personal_ID.fromSliceReader(Controller.this, LOAD_FROM_IMPORTED, sliceReader, true);
+            aesos.close();
             aesis.close();
             s.close();
             serverSocket.close();
@@ -348,19 +352,21 @@ public class Controller extends Observable<OutputEvent> {
         OutputStream os = s.getOutputStream();
         AES_OutputStream aesos = AES_OutputStream.from_ecb(os, AES_BUFFER_SIZE, password_hash);
         os.write(0);
-        aesos.write(password_hash);
-        aesos.flush();
-        InputStream i = s.getInputStream();
-        if(i.read() == 1) {
-            notifyObservers(new OutputEvent.CryptoPasswordInvalidEvent());
-            i.close();
+        InputStream inputStream = s.getInputStream();
+        AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, 1024, password_hash);
+        if(!checkProgramWatermark(inputStream) || !checkConnectionPurposeType(inputStream, CON_PURPOSE_CHECK_ID)
+                || !validateCryptoPassword(aesis, password_hash)) {
+            os.write(1);
             aesos.close();
+            inputStream.close();
             s.close();
             return;
         }
+
+        os.write(0);
         personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
         aesos.close();
-        i.close();
+        inputStream.close();
         s.close();
         notifyObservers(new OutputEvent.IDhandedInSuccessEvent());
     }
@@ -383,14 +389,26 @@ public class Controller extends Observable<OutputEvent> {
                 notifyObservers(new OutputEvent.DummyEvent());
                 return;
             }
+
+            OutputStream outputStream = s.getOutputStream();
+            AES_OutputStream aesos = AES_OutputStream.from_ecb(outputStream, AES_BUFFER_SIZE, crypto_hash);
+            outputStream.write(PROGRAM_WATERMARK);
+            outputStream.write(CON_PURPOSE_IMPORT);
+            aesos.write(crypto_hash);
+            aesos.flush();
+
             Personal_ID personalId = Personal_ID.loadInternal(Controller.this, LOAD_FROM_CREATED, idNumber, true);
             if (personalId == null) {
                 return;
             }
 
-            AES_OutputStream aesos = AES_OutputStream.from_ecb(s.getOutputStream(), AES_BUFFER_SIZE, crypto_hash);
-            aesos.write(PROGRAM_WATERMARK);
-            aesos.write(crypto_hash);
+            if(inputStream.read() == 1) {
+                s.close();
+                serverSocket.close();
+                backgroundRunner = null;
+                notifyObservers(new OutputEvent.DummyEvent());
+                return;
+            }
             personalId.publicProfile.toSliceWriter(new Utils.SliceWriter(aesos));
             personalId.toSliceWriter(new Utils.SliceWriter(aesos), true);
             aesos.close();
@@ -402,14 +420,18 @@ public class Controller extends Observable<OutputEvent> {
         Socket s = new Socket(ip, port);
         s.getOutputStream().write(0);
         byte[]cryptoHash = Utils.passwordHash(crypto);
-        AES_InputStream aesis = AES_InputStream.from_ecb(s.getInputStream(), AES_BUFFER_SIZE, cryptoHash);
+        InputStream inputStream = s.getInputStream();
+        AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, cryptoHash);
+        OutputStream outputStream = s.getOutputStream();
 
-        if(!checkProgramWatermark(aesis))
+        if(!checkProgramWatermark(inputStream) || !checkConnectionPurposeType(inputStream, CON_PURPOSE_IMPORT)
+                || !validateCryptoPassword(aesis, cryptoHash)) {
+            outputStream.write(1);
+            outputStream.flush();
+            aesis.close();
             return;
-
-        if(!validateCryptoPassword(aesis, cryptoHash))
-            return;
-
+        }
+        outputStream.write(0);
         PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
         if(Files.exists(Paths.get(appDataLocation + strPublicProfiles + publicProfile.name + "/" + publicProfile.sequence_number))) {
             PublicProfile saved = PublicProfile.loadInternal(
@@ -423,11 +445,14 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
-        if(personalId == null)
+        if(personalId == null) {
+            aesis.close();
             return;
+        }
 
         if(!validateSignature(personalId)) {
             notifyObservers(new OutputEvent.PersonalIDInvalidEvent());
+            aesis.close();
             return;
         }
         personalId.saveInternal(this, LOAD_FROM_IMPORTED);
@@ -509,11 +534,18 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public boolean checkFileType(InputStream inputStream, int type) throws IOException {
-        byte[]readedType_b =  new byte[4];
-        inputStream.read(readedType_b);
-        int readedType = Utils.bytes_to_int(readedType_b);
+        int readedType = inputStream.read();
         if(readedType != type) {
             notifyObservers(new OutputEvent.WrongFileTypeEvent(readedType));
+            return false;
+        }
+        return true;
+    }
+
+    public boolean checkConnectionPurposeType(InputStream inputStream, int type) throws IOException {
+        int readedType = inputStream.read();
+        if(readedType != type) {
+            notifyObservers(new OutputEvent.WrongConnectionPurposeTypeEvent(readedType));
             return false;
         }
         return true;

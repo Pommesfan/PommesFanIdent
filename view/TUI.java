@@ -335,7 +335,7 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println("Diese Datei ist nicht von diesem Programm");
         } else if (e instanceof OutputEvent.WrongFileTypeEvent evt) {
             System.out.print("Datei beinhaltet ");
-            if(evt.type == FILE_TYPE_PUBLIC_PROFILE)
+            if (evt.type == FILE_TYPE_PUBLIC_PROFILE)
                 System.out.println("ein öffentliches Profil");
             else if (evt.type == FILE_TYPE_PRIVATE_PROFILE) {
                 System.out.println("ein privates Profil");
@@ -343,6 +343,15 @@ public class TUI implements Observer<OutputEvent> {
                 System.out.println("einen Ausweis");
             } else {
                 throw new RuntimeException("No such FileType");
+            }
+        } else if (e instanceof OutputEvent.WrongConnectionPurposeTypeEvent evt) {
+            System.out.print("Verbindung ist zum ");
+            if (evt.type == CON_PURPOSE_IMPORT)
+                System.out.println("importieren");
+            else if (evt.type == CON_PURPOSE_CHECK_ID) {
+                System.out.println("Ausweis checken");
+            } else {
+                throw new RuntimeException("No such ConnectionPurposeType");
             }
         } else if(e instanceof OutputEvent.IDaggregatedEvent) {
             System.out.println("Diesem Profil ist noch ein Ausweis zugeordnet");
