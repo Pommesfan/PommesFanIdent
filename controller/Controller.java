@@ -224,7 +224,7 @@ public class Controller extends Observable<OutputEvent> {
 
         FileOutputStream fos = new FileOutputStream(destination);
         fos.write(PROGRAM_WATERMARK);
-        fos.write(Utils.int_to_bytes(FILE_TYPE_ID));
+        fos.write(FILE_TYPE_ID);
         byte[]password_hash = Utils.passwordHash(password);
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
