@@ -7,18 +7,17 @@ import java.net.ServerSocket;
 import java.security.NoSuchAlgorithmException;
 
 public abstract class BackgroundRunner {
-    final private Thread t;
-    final protected ServerSocket serverSocket;
-    final protected byte[] crypto_hash;
+    private Thread t;
+    protected ServerSocket serverSocket;
+    protected byte[] crypto_hash;
 
-    public BackgroundRunner(Controller c) throws NoSuchAlgorithmException, IOException {
-        serverSocket = new ServerSocket(0);
-        String crypto = Utils.getAlphanumeric(16);
-        crypto_hash = Utils.passwordHash(crypto);
-        String ip = InetAddress.getLocalHost().getHostAddress();
-        c.notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), crypto));
+    protected abstract void routine() throws Exception;
+
+    public BackgroundRunner() {
         t = new Thread(() -> {
             try {
+                // for Android
+                //Looper.prepare();
                 routine();
             } catch (Exception e) {
                 throw new RuntimeException(e);
@@ -26,7 +25,13 @@ public abstract class BackgroundRunner {
         });
     }
 
-    protected abstract void routine() throws Exception;
+    public void init(Controller c) throws NoSuchAlgorithmException, IOException {
+        serverSocket = new ServerSocket(0);
+        String crypto = Utils.getAlphanumeric(16);
+        crypto_hash = Utils.passwordHash(crypto);
+        String ip = InetAddress.getLocalHost().getHostAddress();
+        c.notifyObservers(new OutputEvent.ServerStartedEvent(ip, serverSocket.getLocalPort(), crypto));
+    }
 
     public void start() {
         t.start();

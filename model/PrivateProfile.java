@@ -12,7 +12,7 @@ import java.security.NoSuchAlgorithmException;
 
 import static controller.Controller.*;
 
-public class PrivateProfile extends PublicProfile{
+public class PrivateProfile extends PublicProfile {
     public final byte[] privateKey;
     public PrivateProfile(String name, int sequence_number, String created, ValidityPeriod validityPeriod, String[] dynamicAttributes, byte[] publicKey, byte[] privateKey) {
         super(name, sequence_number, created, validityPeriod, dynamicAttributes, publicKey);

@@ -39,7 +39,9 @@ public class Controller extends Observable<OutputEvent> {
     public static final int CON_PURPOSE_CHECK_ID = 5;
     public static final int AES_BUFFER_SIZE = 1024;
     public final String appDataLocation;
-    private byte[] programPasswordHash = null;
+    private static byte[] programPasswordHash = null;
+    public static Controller controller; // for Android
+
     public Controller(String appDataLocation) {
         this.appDataLocation = appDataLocation;
     }
@@ -262,6 +264,13 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     private BackgroundRunner backgroundRunner;
+    private Personal_ID checkIDrunnerRes;
+
+    public Personal_ID getCheckIDrunnerRes() {
+        Personal_ID res = checkIDrunnerRes;
+        checkIDrunnerRes = null;
+        return res;
+    }
 
     public void deletePublicProfile(String name, int sequenceNumber) throws Exception {
         if(PublicProfile.isIDaggregated(this, name, sequenceNumber))
@@ -283,12 +292,13 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     private class CheckIDrunner extends BackgroundRunner {
-        public CheckIDrunner() throws NoSuchAlgorithmException, IOException {
-            super(Controller.this);
+        public CheckIDrunner()  {
+            super();
         }
 
         @Override
         protected void routine() throws Exception {
+            init(Controller.this);
             Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {
@@ -327,6 +337,8 @@ public class Controller extends Observable<OutputEvent> {
                 return;
             }
 
+            checkIDrunnerRes = personalId;
+
             if (validateSignature(personalId)) {
                 notifyObservers(new OutputEvent.PersonalIDValidEvent(personalId.toString()));
             } else {
@@ -335,7 +347,7 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void checkPersonalIDFromRemote() throws Exception {
+    public void checkPersonalIDFromRemote() {
         backgroundRunner = new CheckIDrunner();
         backgroundRunner.start();
     }
@@ -373,13 +385,14 @@ public class Controller extends Observable<OutputEvent> {
 
     private class ExportIDrunner extends BackgroundRunner {
         private final String idNumber;
-        public ExportIDrunner(String idNumber) throws NoSuchAlgorithmException, IOException {
-            super(Controller.this);
+        public ExportIDrunner(String idNumber) {
+            super();
             this.idNumber = idNumber.toUpperCase();
         }
 
         @Override
         protected void routine() throws Exception {
+            init(Controller.this);
             Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {

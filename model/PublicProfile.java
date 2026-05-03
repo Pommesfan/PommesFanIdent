@@ -171,8 +171,9 @@ public class PublicProfile {
 
         @Override
         public boolean equals(Object obj) {
-            if(!(obj instanceof ValidityPeriod v))
+            if(!(obj instanceof ValidityPeriod))
                 return false;
+            ValidityPeriod v = (ValidityPeriod) obj;
             return validFrom.equals(v.validFrom) && validUntilForCreation.equals(v.validUntilForCreation) &&
                     validUntilForCreated.equals(v.validUntilForCreated) && maxValidDays == v.maxValidDays;
         }
@@ -193,8 +194,9 @@ public class PublicProfile {
 
     @Override
     public boolean equals(Object obj) {
-        if(!(obj instanceof PublicProfile p))
+        if(!(obj instanceof PublicProfile))
             return false;
+        PublicProfile p = (PublicProfile) obj;
         return name.equals(p.name) && sequence_number == p.sequence_number && created.equals(p.created) &&
                 validityPeriod.equals(p.validityPeriod) && Arrays.equals(dynamicAttributes, p.dynamicAttributes) &&
                 Arrays.equals(publicKey, p.publicKey);
