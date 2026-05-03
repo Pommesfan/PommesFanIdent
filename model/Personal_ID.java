@@ -134,8 +134,8 @@ public class Personal_ID {
             return null;
 
         if(loadBlob) {
-            byte[] personalImage_b = controller.readAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalId.personalImagePath);
-            byte[] handSignature_b = controller.readAttachedData(controller.appDataLocation + Controller.strHandSignatures + personalId.handSignaturePath);
+            byte[] personalImage_b = controller.readAttachedData(personalId.ID_number, ATTACHMENT_PERSONAL_IMAGE);
+            byte[] handSignature_b = controller.readAttachedData(personalId.ID_number, ATTACHMENT_HAND_SIGNATURE);
             personalId.blob = Optional.of(new BLOB(personalImage_b, handSignature_b));
         }
         aesis.close();
@@ -183,8 +183,10 @@ public class Personal_ID {
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, controller.getProgramPasswordHash());
         toSliceWriter(new Utils.SliceWriter(aesos), false);
         aesos.close();
-        controller.saveAttachedData(controller.appDataLocation + Controller.strPersonalImages + personalImagePath, blob_unwrapped.personal_image);
-        controller.saveAttachedData(controller.appDataLocation + Controller.strHandSignatures + handSignaturePath, blob_unwrapped.hand_signature);
+        controller.saveAttachedData(Controller.strPersonalImages + personalImagePath,
+                ATTACHMENT_PERSONAL_IMAGE, ID_number, blob_unwrapped.personal_image);
+        controller.saveAttachedData(Controller.strHandSignatures + handSignaturePath,
+                ATTACHMENT_HAND_SIGNATURE, ID_number, blob_unwrapped.hand_signature);
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {

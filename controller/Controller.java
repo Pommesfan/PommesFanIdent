@@ -1,5 +1,6 @@
 package controller;
 
+import model.AttachmentRelation;
 import model.Personal_ID;
 import model.PrivateProfile;
 import model.PublicProfile;
@@ -16,6 +17,7 @@ import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 
@@ -29,6 +31,8 @@ public class Controller extends Observable<OutputEvent> {
     public static final String strCreatedPersonalIDs = "CreatedPersonalIDs/";
     public static final String strImportedPersonalIDs = "ImportedPersonalIDs/";
     public static final String strProgramPassword = "ProgramPassword";
+    public static final String strPersonalImageRelations = "PersonalImagesRelations";
+    public static final String strHandSignaturesRelations = "HandSignaturesRelations";
     public static final String encryptionAlgorithm = "RSA";
     public static final String hashAllgorithm = "SHA256withRSA";
     public static final byte[]PROGRAM_WATERMARK = new byte[]{-87, 105, -121, -73, 46, -16, 16, -12, -54, 16, 81, 127, 85, 10, -35, -67};
@@ -38,6 +42,8 @@ public class Controller extends Observable<OutputEvent> {
     public static final int CON_PURPOSE_IMPORT = 4;
     public static final int CON_PURPOSE_CHECK_ID = 5;
     public static final int AES_BUFFER_SIZE = 1024;
+    public static final int ATTACHMENT_PERSONAL_IMAGE = 1;
+    public static final int ATTACHMENT_HAND_SIGNATURE = 2;
     public final String appDataLocation;
     private static byte[] programPasswordHash = null;
     public static Controller controller; // for Android
@@ -494,17 +500,49 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.ShowProfileEvent(profile.toString()));
     }
 
-    public void saveAttachedData(String url, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        File f = Utils.createFileAndSubfolder(url);
-        FileOutputStream fos = new FileOutputStream(f);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, programPasswordHash);
-        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
-        sliceWriter.write(data);
-        aesos.close();
+    public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        AttachmentRelation relation;
+        String url;
+        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
+            relation = AttachmentRelation.readFile(appDataLocation + strPersonalImageRelations);
+            url = appDataLocation + strPersonalImages;
+        } else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE) {
+            relation = AttachmentRelation.readFile(appDataLocation + strHandSignaturesRelations);
+            url = appDataLocation + strHandSignatures;
+        } else {
+            throw new IllegalArgumentException("not such relation type");
+        }
+        List<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
+        String imageFileName;
+        if(sameOriginalFileNames.isEmpty()) {
+            imageFileName = Utils.getAlphanumeric(8);
+            File f = Utils.createFileAndSubfolder(url + imageFileName);
+            FileOutputStream fos = new FileOutputStream(f);
+            AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, programPasswordHash);
+            Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
+            sliceWriter.write(data);
+            aesos.close();
+        } else {
+            imageFileName = sameOriginalFileNames.getFirst();
+        }
+        relation.insertRelation(imageFileName, originalFileName, idNumber);
+        relation.save();
     }
 
-    public byte[]readAttachedData(String url) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        FileInputStream fis = new FileInputStream(url);
+    public byte[]readAttachedData(String idNumber, int attachmentMode) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        AttachmentRelation relation;
+        String url;
+        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
+            relation = AttachmentRelation.readFile(appDataLocation + strPersonalImageRelations);
+            url = appDataLocation + strPersonalImages;
+        } else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE) {
+            relation = AttachmentRelation.readFile(appDataLocation + strHandSignaturesRelations);
+            url = appDataLocation + strHandSignatures;
+        } else {
+            throw new IllegalArgumentException("not such relation type");
+        }
+        String imageFileName = relation.getImageFileName(idNumber);
+        FileInputStream fis = new FileInputStream(url + imageFileName);
         AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE, programPasswordHash);
         Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         byte[]res = sliceReader.next();
@@ -517,7 +555,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public boolean setProgramPasswordHash(String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
-        this.programPasswordHash = Utils.passwordHash(password);
+        programPasswordHash = Utils.passwordHash(password);
         byte[]passwordHash = Utils.passwordHash(password);
         String url = appDataLocation + strProgramPassword;
         if(Files.exists(Paths.get(url))) {
@@ -532,6 +570,9 @@ public class Controller extends Observable<OutputEvent> {
             AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, 32, passwordHash);
             aesos.write(passwordHash);
             aesos.close();
+            // create attachment relation files
+            Files.createFile(Paths.get(appDataLocation + strPersonalImageRelations));
+            Files.createFile(Paths.get(appDataLocation + strHandSignaturesRelations));
             return true;
         }
     }
