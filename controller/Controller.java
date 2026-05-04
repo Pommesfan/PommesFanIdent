@@ -500,24 +500,34 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.ShowProfileEvent(profile.toString()));
     }
 
-    public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] image) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
         String url = AttachmentRelation.attachmentPath(this, attachmentMode);
         List<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
         String imageFileName;
         if(sameOriginalFileNames.isEmpty()) {
             imageFileName = Utils.getAlphanumeric(8);
-            File f = Utils.createFileAndSubfolder(url + imageFileName);
-            FileOutputStream fos = new FileOutputStream(f);
-            AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, programPasswordHash);
-            Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
-            sliceWriter.write(data);
-            aesos.close();
+            saveAttachmentFile(url + imageFileName, image);
         } else {
-            imageFileName = sameOriginalFileNames.getFirst();
+            Optional<String> sameImage = getSameImage(url, image, sameOriginalFileNames);
+            if(sameImage.isEmpty()) {
+                imageFileName = Utils.getAlphanumeric(8);
+                saveAttachmentFile(url + imageFileName, image);
+            } else {
+                imageFileName = sameImage.get();
+            }
         }
         relation.insertRelation(imageFileName, originalFileName, idNumber);
         relation.save();
+    }
+
+    private void saveAttachmentFile(String url, byte[]attachment) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        File f = Utils.createFileAndSubfolder(url);
+        FileOutputStream fos = new FileOutputStream(f);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, programPasswordHash);
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
+        sliceWriter.write(attachment);
+        aesos.close();
     }
 
     public byte[]readAttachedData(String idNumber, int attachmentMode) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -557,6 +567,23 @@ public class Controller extends Observable<OutputEvent> {
             Files.createFile(Paths.get(appDataLocation + strHandSignaturesRelations));
             return true;
         }
+    }
+
+    private Optional<String> getSameImage(String url, byte[] image, List<String> sameOriginalFileNames) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        for (String fileName: sameOriginalFileNames) {
+            if(isSameImage(url + fileName, image)) {
+                return Optional.of(fileName);
+            }
+        }
+        return Optional.empty();
+    }
+
+    private boolean isSameImage(String url, byte[]image) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        FileInputStream fis = new FileInputStream(url);
+        AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE, programPasswordHash);
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
+        byte[]res = sliceReader.next();
+        return Arrays.equals(image, res);
     }
 
     public boolean checkProgramWatermark(InputStream inputStream) throws IOException {
