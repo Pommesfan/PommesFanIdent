@@ -1,9 +1,13 @@
 package model;
 
+import controller.Controller;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+
+import static controller.Controller.*;
 
 public class AttachmentRelation {
     private String text; //
@@ -45,7 +49,24 @@ public class AttachmentRelation {
         Files.write(Paths.get(filePath), text.getBytes());
     }
 
-    public static AttachmentRelation readFile(String filePath) throws IOException {
+    public static AttachmentRelation getRelation(Controller controller, int attachmentMode) throws IOException {
+        String filePath;
+        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
+            filePath = controller.appDataLocation + strPersonalImageRelations;
+        } else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE) {
+            filePath = controller.appDataLocation + strHandSignaturesRelations;
+        } else {
+            throw new IllegalArgumentException("not such relation type");
+        }
         return new AttachmentRelation(filePath, Files.readString(Paths.get(filePath)));
+    }
+
+    public static String attachmentPath(Controller controller, int attachmentMode) {
+        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE)
+            return controller.appDataLocation + strPersonalImages;
+        else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE)
+            return controller.appDataLocation + strHandSignatures;
+        else
+            throw new IllegalArgumentException("not such relation type");
     }
 }

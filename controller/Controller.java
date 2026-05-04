@@ -501,17 +501,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] data) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        AttachmentRelation relation;
-        String url;
-        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
-            relation = AttachmentRelation.readFile(appDataLocation + strPersonalImageRelations);
-            url = appDataLocation + strPersonalImages;
-        } else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE) {
-            relation = AttachmentRelation.readFile(appDataLocation + strHandSignaturesRelations);
-            url = appDataLocation + strHandSignatures;
-        } else {
-            throw new IllegalArgumentException("not such relation type");
-        }
+        AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
+        String url = AttachmentRelation.attachmentPath(this, attachmentMode);
         List<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
         String imageFileName;
         if(sameOriginalFileNames.isEmpty()) {
@@ -530,17 +521,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public byte[]readAttachedData(String idNumber, int attachmentMode) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        AttachmentRelation relation;
-        String url;
-        if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
-            relation = AttachmentRelation.readFile(appDataLocation + strPersonalImageRelations);
-            url = appDataLocation + strPersonalImages;
-        } else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE) {
-            relation = AttachmentRelation.readFile(appDataLocation + strHandSignaturesRelations);
-            url = appDataLocation + strHandSignatures;
-        } else {
-            throw new IllegalArgumentException("not such relation type");
-        }
+        AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
+        String url = AttachmentRelation.attachmentPath(this, attachmentMode);
         String imageFileName = relation.getImageFileName(idNumber);
         FileInputStream fis = new FileInputStream(url + imageFileName);
         AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE, programPasswordHash);

@@ -183,10 +183,8 @@ public class Personal_ID {
         AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, controller.getProgramPasswordHash());
         toSliceWriter(new Utils.SliceWriter(aesos), false);
         aesos.close();
-        controller.saveAttachedData(Controller.strPersonalImages + personalImagePath,
-                ATTACHMENT_PERSONAL_IMAGE, ID_number, blob_unwrapped.personal_image);
-        controller.saveAttachedData(Controller.strHandSignatures + handSignaturePath,
-                ATTACHMENT_HAND_SIGNATURE, ID_number, blob_unwrapped.hand_signature);
+        controller.saveAttachedData(personalImagePath, ATTACHMENT_PERSONAL_IMAGE, ID_number, blob_unwrapped.personal_image);
+        controller.saveAttachedData(handSignaturePath, ATTACHMENT_HAND_SIGNATURE, ID_number, blob_unwrapped.hand_signature);
     }
 
     public byte[] toByte(boolean withPaths) throws IOException {
