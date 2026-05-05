@@ -1,44 +1,35 @@
 package model;
 
 import controller.Controller;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.*;
 import java.util.*;
 
 import static controller.Controller.*;
 
 public class AttachmentRelation {
-    private String text; //
+    private final List<String[]> data; //
     public final String filePath;
 
-    public AttachmentRelation(String filePath, String text) {
+    public AttachmentRelation(String filePath, List<String[]> data) {
         this.filePath = filePath;
-        this.text = text;
+        this.data = data;
     }
 
     public void insertRelation(String imageFileName, String originalFileName, String idNumber) {
-        text += "\n" + imageFileName + ":" + originalFileName + ":" + idNumber;
+        data.add(new String[]{imageFileName, originalFileName, idNumber});
     }
 
     public String getImageFileName(String idNumber) {
-        for(String line: text.split("\n")) {
-            String[]attributes = line.split(":");
-            if(attributes.length < 3)
-                continue;
+        for(String[] attributes: data) {
             if(attributes[2].equals(idNumber))
                 return attributes[0];
         }
         throw new NoSuchElementException("idNumber not found");
     }
 
-    public List<String> getSameFileNames(String originalFileName) {
-        List<String> res = new LinkedList<>();
-        for(String line: text.split("\n")) {
-            String[]attributes = line.split(":");
-            if(attributes.length < 3)
-                continue;
+    public Set<String> getSameFileNames(String originalFileName) {
+        TreeSet<String> res = new TreeSet<>();
+        for(String[] attributes: data) {
             if(attributes[1].equals(originalFileName))
                 res.add(attributes[0]);
         }
@@ -46,7 +37,42 @@ public class AttachmentRelation {
     }
 
     public void save() throws IOException {
-        Files.write(Paths.get(filePath), text.getBytes());
+        FileOutputStream fos = new FileOutputStream(filePath);
+        OutputStreamWriter osw = new OutputStreamWriter(fos);
+        BufferedWriter bw = new BufferedWriter(osw);
+        for (String[]arguments: data) {
+            bw.write(arguments[0] + ":" + arguments[1] + ":" + arguments[2]);
+            bw.newLine();
+        }
+        bw.close();
+        osw.close();
+        fos.close();
+    }
+
+    public String removeID(String idNumber) {
+        for (String[]arguments: data) {
+            if(arguments[2].equals(idNumber)) {
+                data.remove(arguments);
+                return arguments[0];
+            }
+        }
+        throw new NoSuchElementException("no such id number");
+    }
+
+    public boolean hasImage(String imageID) {
+        for (String[]arguments: data) {
+            if(arguments[0].equals(imageID))
+                return true;
+        }
+        return false;
+    }
+
+    public boolean hasID(String idNumber) {
+        for (String[]arguments: data) {
+            if(arguments[2].equals(idNumber))
+                return true;
+        }
+        return false;
     }
 
     public static AttachmentRelation getRelation(Controller controller, int attachmentMode) throws IOException {
@@ -58,7 +84,16 @@ public class AttachmentRelation {
         } else {
             throw new IllegalArgumentException("not such relation type");
         }
-        return new AttachmentRelation(filePath, Files.readString(Paths.get(filePath)));
+        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
+        List<String[]> data = new LinkedList<>();
+        String line;
+        while ((line = br.readLine()) != null)   {
+            String[]arguments = line.split(":");
+            if(arguments.length != 3)
+                continue;
+            data.add(arguments);
+        }
+        return new AttachmentRelation(filePath, data);
     }
 
     public static String attachmentPath(Controller controller, int attachmentMode) {

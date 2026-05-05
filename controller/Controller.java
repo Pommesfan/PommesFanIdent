@@ -5,6 +5,7 @@ import model.Personal_ID;
 import model.PrivateProfile;
 import model.PublicProfile;
 import utils.*;
+import utils.Observable;
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.net.InetAddress;
@@ -16,10 +17,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
 import java.security.spec.X509EncodedKeySpec;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Optional;
+import java.util.*;
 
 public class Controller extends Observable<OutputEvent> {
     public static final int LOAD_FROM_CREATED = 1;
@@ -291,8 +289,24 @@ public class Controller extends Observable<OutputEvent> {
         Personal_ID id = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, idNumber, true);
         if(id == null)
             return;
-        //Files.delete(Paths.get(appDataLocation + strPersonalImages + id.personalImagePath));
-        //Files.delete(Paths.get(appDataLocation + strHandSignatures + id.handSignaturePath));
+
+        // if id is present in created, don't delete relation
+        if(!Files.exists(Paths.get(appDataLocation + strCreatedPersonalIDs + idNumber))) {
+            AttachmentRelation relationPersonalImage = AttachmentRelation.getRelation(this, ATTACHMENT_PERSONAL_IMAGE);
+            String personalImageFile = relationPersonalImage.removeID(id.ID_number);
+            if(!relationPersonalImage.hasImage(personalImageFile)) {
+                Files.delete(Paths.get(appDataLocation + strPersonalImages + personalImageFile));
+            }
+            relationPersonalImage.save();
+
+            AttachmentRelation relationHandSignature = AttachmentRelation.getRelation(this, ATTACHMENT_HAND_SIGNATURE);
+            String handSignatureFile = relationHandSignature.removeID(id.ID_number);
+            if(!relationHandSignature.hasImage(handSignatureFile)) {
+                Files.delete(Paths.get(appDataLocation + strHandSignatures + handSignatureFile));
+            }
+            relationHandSignature.save();
+        }
+
         Files.delete(Paths.get(appDataLocation + strImportedPersonalIDs + idNumber));
         notifyObservers(new OutputEvent.DummyEvent());
     }
@@ -503,7 +517,7 @@ public class Controller extends Observable<OutputEvent> {
     public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] image) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
         String url = AttachmentRelation.attachmentPath(this, attachmentMode);
-        List<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
+        Set<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
         String imageFileName;
         if(sameOriginalFileNames.isEmpty()) {
             imageFileName = Utils.getAlphanumeric(8);
@@ -517,7 +531,8 @@ public class Controller extends Observable<OutputEvent> {
                 imageFileName = sameImage.get();
             }
         }
-        relation.insertRelation(imageFileName, originalFileName, idNumber);
+        if(!relation.hasID(idNumber))
+            relation.insertRelation(imageFileName, originalFileName, idNumber);
         relation.save();
     }
 
@@ -569,7 +584,7 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    private Optional<String> getSameImage(String url, byte[] image, List<String> sameOriginalFileNames) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    private Optional<String> getSameImage(String url, byte[] image, Set<String> sameOriginalFileNames) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         for (String fileName: sameOriginalFileNames) {
             if(isSameImage(url + fileName, image)) {
                 return Optional.of(fileName);
