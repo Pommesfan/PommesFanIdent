@@ -71,7 +71,7 @@ public class Controller extends Observable<OutputEvent> {
 
         PrivateProfile privateProfile = new PrivateProfile(
                 profileName, sequence_number, todayDate, validityPeriod, dynamicAttributes, publicKey.getEncoded(), privateKey.getEncoded());
-        privateProfile.saveInternal(this, appDataLocation + strPrivateProfiles + profileName + "/" + sequence_number);
+        privateProfile.saveInternal(appDataLocation + strPrivateProfiles + profileName + "/" + sequence_number);
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
@@ -96,7 +96,7 @@ public class Controller extends Observable<OutputEvent> {
         return signature.sign();
     }
 
-    public void generateID(Controller controller, String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+    public void generateID(String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
         if(!Utils.validateStringDate(validUntil)) {
             notifyObservers(new OutputEvent.InvalidDateEvent());
             return;
@@ -104,7 +104,7 @@ public class Controller extends Observable<OutputEvent> {
 
         //load public profile
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strPrivateProfiles, publicProfileName, sequence_number);
+                appDataLocation + strPrivateProfiles, publicProfileName, sequence_number);
         if(privateProfile == null) {
             return;
         }
@@ -133,7 +133,7 @@ public class Controller extends Observable<OutputEvent> {
         byte[] signature_b = sign_id(personalId, privateProfile);
         personalId.signature = Optional.of(signature_b);
         //Save ID
-        personalId.saveInternal(this, LOAD_FROM_CREATED);
+        personalId.saveInternal(LOAD_FROM_CREATED);
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
@@ -158,7 +158,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void checkPersonalID(String id_number) throws Exception {
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
+        Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
         if(personalId == null) {
             return;
         }
@@ -171,7 +171,7 @@ public class Controller extends Observable<OutputEvent> {
 
     public void exportPublicProfile(String profileName, int sequence_number, File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strPrivateProfiles, profileName, sequence_number);
+                appDataLocation + strPrivateProfiles, profileName, sequence_number);
         if(privateProfile == null)
             return;
 
@@ -189,16 +189,16 @@ public class Controller extends Observable<OutputEvent> {
 
         byte[]password_hash = Utils.passwordHash(password);
         AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
-        PublicProfile publicProfile = PublicProfile.fromExternal(aesis, this, password_hash);
+        PublicProfile publicProfile = PublicProfile.fromExternal(aesis, password_hash);
         if (publicProfile != null) {
-            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles);
+            publicProfile.saveInternal(appDataLocation + strPublicProfiles);
             notifyObservers(new OutputEvent.DummyEvent());
         }
     }
 
     public void exportPrivateProfile(String profileName, int sequenceNumber, File destination, String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
-                this, appDataLocation + strPrivateProfiles, profileName, sequenceNumber);
+                appDataLocation + strPrivateProfiles, profileName, sequenceNumber);
         if(privateProfile == null)
             return;
         privateProfile.saveExternal(destination, password);
@@ -214,16 +214,16 @@ public class Controller extends Observable<OutputEvent> {
 
         byte[]password_hash = Utils.passwordHash(password);
         AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, password_hash);
-        PrivateProfile privateProfile = PrivateProfile.fromExternal(aesis, this, password_hash);
+        PrivateProfile privateProfile = PrivateProfile.fromExternal(aesis, password_hash);
         if (privateProfile != null) {
-            privateProfile.saveInternal(this, appDataLocation + strPrivateProfiles + privateProfile.name +
+            privateProfile.saveInternal(appDataLocation + strPrivateProfiles + privateProfile.name +
                     "/" + privateProfile.sequence_number);
             notifyObservers(new OutputEvent.DummyEvent());
         }
     }
 
     public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_CREATED, personalID_s.toUpperCase(), true);
+        Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_CREATED, personalID_s.toUpperCase(), true);
         if (personalId == null) {
             return;
         }
@@ -240,7 +240,7 @@ public class Controller extends Observable<OutputEvent> {
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
-    public void importPersonalID(InputStream inputStream, Controller controller, String password) throws Exception {
+    public void importPersonalID(InputStream inputStream, String password) throws Exception {
         if(!checkProgramWatermark(inputStream))
             return;
         if (!checkFileType(inputStream, FILE_TYPE_ID))
@@ -253,7 +253,7 @@ public class Controller extends Observable<OutputEvent> {
         if(!controller.validateCryptoPassword(aesis, password_hash))
             return;
 
-        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, sliceReader, true);
+        Personal_ID personalId = Personal_ID.fromSliceReader(LOAD_FROM_IMPORTED, sliceReader, true);
         if (personalId == null) {
             return;
         }
@@ -263,7 +263,7 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
 
-        personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        personalId.saveInternal(LOAD_FROM_IMPORTED);
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
@@ -277,7 +277,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void deletePublicProfile(String name, int sequenceNumber) throws Exception {
-        if(PublicProfile.isIDaggregated(this, name, sequenceNumber))
+        if(PublicProfile.isIDaggregated(name, sequenceNumber))
             notifyObservers(new OutputEvent.IDaggregatedEvent());
         else {
             Files.delete(Paths.get(appDataLocation + strPublicProfiles + name + "/" + sequenceNumber));
@@ -286,20 +286,20 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void deleteID(String idNumber) throws Exception {
-        Personal_ID id = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, idNumber, true);
+        Personal_ID id = Personal_ID.loadInternal(LOAD_FROM_IMPORTED, idNumber, true);
         if(id == null)
             return;
 
         // if id is present in created, don't delete relation
         if(!Files.exists(Paths.get(appDataLocation + strCreatedPersonalIDs + idNumber))) {
-            AttachmentRelation relationPersonalImage = AttachmentRelation.getRelation(this, ATTACHMENT_PERSONAL_IMAGE);
+            AttachmentRelation relationPersonalImage = AttachmentRelation.getRelation(ATTACHMENT_PERSONAL_IMAGE);
             String personalImageFile = relationPersonalImage.removeID(id.ID_number);
             if(!relationPersonalImage.hasImage(personalImageFile)) {
                 Files.delete(Paths.get(appDataLocation + strPersonalImages + personalImageFile));
             }
             relationPersonalImage.save();
 
-            AttachmentRelation relationHandSignature = AttachmentRelation.getRelation(this, ATTACHMENT_HAND_SIGNATURE);
+            AttachmentRelation relationHandSignature = AttachmentRelation.getRelation(ATTACHMENT_HAND_SIGNATURE);
             String handSignatureFile = relationHandSignature.removeID(id.ID_number);
             if(!relationHandSignature.hasImage(handSignatureFile)) {
                 Files.delete(Paths.get(appDataLocation + strHandSignatures + handSignatureFile));
@@ -318,7 +318,7 @@ public class Controller extends Observable<OutputEvent> {
 
         @Override
         protected void routine() throws Exception {
-            init(Controller.this);
+            init();
             Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {
@@ -346,7 +346,7 @@ public class Controller extends Observable<OutputEvent> {
 
             AES_InputStream aesis = AES_InputStream.from_ecb(inputStream, AES_BUFFER_SIZE, crypto_hash);
             Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
-            Personal_ID personalId = Personal_ID.fromSliceReader(Controller.this, LOAD_FROM_IMPORTED, sliceReader, true);
+            Personal_ID personalId = Personal_ID.fromSliceReader(LOAD_FROM_IMPORTED, sliceReader, true);
             aesos.close();
             aesis.close();
             s.close();
@@ -375,7 +375,7 @@ public class Controller extends Observable<OutputEvent> {
     public void handInPersonalIDtoRemote(String id_number, String ip, int port, String password) throws Exception {
         Socket s = new Socket(ip, port);
         // load personal id
-        Personal_ID personalId = Personal_ID.loadInternal(this, LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
+        Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_IMPORTED, id_number.toUpperCase(), true);
         if (personalId == null) {
             return;
         }
@@ -412,7 +412,7 @@ public class Controller extends Observable<OutputEvent> {
 
         @Override
         protected void routine() throws Exception {
-            init(Controller.this);
+            init();
             Socket s = serverSocket.accept();
             InputStream inputStream = s.getInputStream();
             if(inputStream.read() == 1) {
@@ -430,7 +430,7 @@ public class Controller extends Observable<OutputEvent> {
             aesos.write(crypto_hash);
             aesos.flush();
 
-            Personal_ID personalId = Personal_ID.loadInternal(Controller.this, LOAD_FROM_CREATED, idNumber, true);
+            Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_CREATED, idNumber, true);
             if (personalId == null) {
                 return;
             }
@@ -465,19 +465,19 @@ public class Controller extends Observable<OutputEvent> {
             return;
         }
         outputStream.write(0);
-        PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis), this, cryptoHash);
+        PublicProfile publicProfile = PublicProfile.fromSliceReader(new Utils.SliceReader(aesis));
         if(Files.exists(Paths.get(appDataLocation + strPublicProfiles + publicProfile.name + "/" + publicProfile.sequence_number))) {
             PublicProfile saved = PublicProfile.loadInternal(
-                    this, appDataLocation + strPublicProfiles, publicProfile.name, publicProfile.sequence_number);
+                    appDataLocation + strPublicProfiles, publicProfile.name, publicProfile.sequence_number);
             if(!saved.equals(publicProfile)) {
                 notifyObservers(new OutputEvent.OtherProfileFoundEvent());
                 return;
             }
         } else {
-            publicProfile.saveInternal(this, appDataLocation + strPublicProfiles + "/");
+            publicProfile.saveInternal(appDataLocation + strPublicProfiles + "/");
         }
 
-        Personal_ID personalId = Personal_ID.fromSliceReader(this, LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
+        Personal_ID personalId = Personal_ID.fromSliceReader(LOAD_FROM_IMPORTED, new Utils.SliceReader(aesis), true);
         if(personalId == null) {
             aesis.close();
             return;
@@ -488,7 +488,7 @@ public class Controller extends Observable<OutputEvent> {
             aesis.close();
             return;
         }
-        personalId.saveInternal(this, LOAD_FROM_IMPORTED);
+        personalId.saveInternal(LOAD_FROM_IMPORTED);
         notifyObservers(new OutputEvent.DummyEvent());
         aesis.close();
     }
@@ -507,7 +507,7 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void showPublicProfile(String profileName, int sequence) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        PublicProfile profile = PublicProfile.loadInternal(this, appDataLocation + Controller.strPublicProfiles, profileName, sequence);
+        PublicProfile profile = PublicProfile.loadInternal(appDataLocation + Controller.strPublicProfiles, profileName, sequence);
         if(profile == null) {
             return;
         }
@@ -515,8 +515,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public void saveAttachedData(String originalFileName, int attachmentMode, String idNumber, byte[] image) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
-        String url = AttachmentRelation.attachmentPath(this, attachmentMode);
+        AttachmentRelation relation = AttachmentRelation.getRelation(attachmentMode);
+        String url = AttachmentRelation.attachmentPath(attachmentMode);
         Set<String> sameOriginalFileNames = relation.getSameFileNames(originalFileName);
         String imageFileName;
         if(sameOriginalFileNames.isEmpty()) {
@@ -546,8 +546,8 @@ public class Controller extends Observable<OutputEvent> {
     }
 
     public byte[]readAttachedData(String idNumber, int attachmentMode) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        AttachmentRelation relation = AttachmentRelation.getRelation(this, attachmentMode);
-        String url = AttachmentRelation.attachmentPath(this, attachmentMode);
+        AttachmentRelation relation = AttachmentRelation.getRelation(attachmentMode);
+        String url = AttachmentRelation.attachmentPath(attachmentMode);
         String imageFileName = relation.getImageFileName(idNumber);
         FileInputStream fis = new FileInputStream(url + imageFileName);
         AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE, programPasswordHash);

@@ -134,7 +134,7 @@ public class TUI implements Observer<OutputEvent> {
             return;
         }
 
-        controller.generateID(controller, publicProfile, sequence_number, valid_until, name, surname, birthdate, address, dynamicAttributeValues, personalPicture, handSignature);
+        controller.generateID(publicProfile, sequence_number, valid_until, name, surname, birthdate, address, dynamicAttributeValues, personalPicture, handSignature);
     }
 
     private void doCheckPersonalID() throws Exception {
@@ -165,7 +165,7 @@ public class TUI implements Observer<OutputEvent> {
         }
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
-        controller.importPersonalID(Files.newInputStream(source.toPath()), controller, password);
+        controller.importPersonalID(Files.newInputStream(source.toPath()), password);
     }
 
     private void doExportPublicProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {

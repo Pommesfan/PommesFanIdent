@@ -1,7 +1,9 @@
 package model;
 
-import controller.Controller;
+import javax.crypto.NoSuchPaddingException;
 import java.io.*;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 import static controller.Controller.*;
@@ -36,7 +38,7 @@ public class AttachmentRelation {
         return res;
     }
 
-    public void save() throws IOException {
+    public void save() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileOutputStream fos = new FileOutputStream(filePath);
         OutputStreamWriter osw = new OutputStreamWriter(fos);
         BufferedWriter bw = new BufferedWriter(osw);
@@ -75,7 +77,7 @@ public class AttachmentRelation {
         return false;
     }
 
-    public static AttachmentRelation getRelation(Controller controller, int attachmentMode) throws IOException {
+    public static AttachmentRelation getRelation(int attachmentMode) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         String filePath;
         if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE) {
             filePath = controller.appDataLocation + strPersonalImageRelations;
@@ -84,7 +86,9 @@ public class AttachmentRelation {
         } else {
             throw new IllegalArgumentException("not such relation type");
         }
-        BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(filePath)));
+        FileInputStream fis = new FileInputStream(filePath);
+        InputStreamReader isr = new InputStreamReader(fis);
+        BufferedReader br = new BufferedReader(isr);
         List<String[]> data = new LinkedList<>();
         String line;
         while ((line = br.readLine()) != null)   {
@@ -93,10 +97,13 @@ public class AttachmentRelation {
                 continue;
             data.add(arguments);
         }
+        br.close();
+        isr.close();
+        fis.close();
         return new AttachmentRelation(filePath, data);
     }
 
-    public static String attachmentPath(Controller controller, int attachmentMode) {
+    public static String attachmentPath(int attachmentMode) {
         if(attachmentMode == ATTACHMENT_PERSONAL_IMAGE)
             return controller.appDataLocation + strPersonalImages;
         else if(attachmentMode == ATTACHMENT_HAND_SIGNATURE)
