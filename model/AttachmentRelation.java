@@ -1,5 +1,9 @@
 package model;
 
+import utils.AES_InputStream;
+import utils.AES_OutputStream;
+import utils.Utils;
+
 import javax.crypto.NoSuchPaddingException;
 import java.io.*;
 import java.security.InvalidKeyException;
@@ -9,6 +13,7 @@ import java.util.*;
 import static controller.Controller.*;
 
 public class AttachmentRelation {
+    public static final int AES_BUFFER_SIZE_RELATION = 256;
     private final List<String[]> data; //
     public final String filePath;
 
@@ -40,15 +45,13 @@ public class AttachmentRelation {
 
     public void save() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         FileOutputStream fos = new FileOutputStream(filePath);
-        OutputStreamWriter osw = new OutputStreamWriter(fos);
-        BufferedWriter bw = new BufferedWriter(osw);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE_RELATION, controller.getProgramPasswordHash());
+        aesos.write(data.size());
+        Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         for (String[]arguments: data) {
-            bw.write(arguments[0] + ":" + arguments[1] + ":" + arguments[2]);
-            bw.newLine();
+            sliceWriter.writeLine(arguments[0] + ":" + arguments[1] + ":" + arguments[2]);
         }
-        bw.close();
-        osw.close();
-        fos.close();
+        aesos.close();
     }
 
     public String removeID(String idNumber) {
@@ -87,19 +90,17 @@ public class AttachmentRelation {
             throw new IllegalArgumentException("not such relation type");
         }
         FileInputStream fis = new FileInputStream(filePath);
-        InputStreamReader isr = new InputStreamReader(fis);
-        BufferedReader br = new BufferedReader(isr);
+        AES_InputStream aesis = AES_InputStream.from_ecb(fis, AES_BUFFER_SIZE_RELATION, controller.getProgramPasswordHash());
+        int numberOfLines = aesis.read();
+        Utils.SliceReader sliceReader = new Utils.SliceReader(aesis);
         List<String[]> data = new LinkedList<>();
-        String line;
-        while ((line = br.readLine()) != null)   {
-            String[]arguments = line.split(":");
+        for (int i = 0; i < numberOfLines; i++) {
+            String[]arguments = sliceReader.readLine().split(":");
             if(arguments.length != 3)
                 continue;
             data.add(arguments);
         }
-        br.close();
-        isr.close();
-        fis.close();
+        aesis.close();
         return new AttachmentRelation(filePath, data);
     }
 
