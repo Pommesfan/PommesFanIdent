@@ -17,12 +17,30 @@ import java.util.Scanner;
 import static controller.Controller.*;
 
 public class TUI implements Observer<OutputEvent> {
-    public static final String introMessage = "Aktion auswählen:\n1: Öffentliches Profil erstellen\n" +
-            "2: Ausweis erstellen\n3: Ausweis prüfen\n4: Öffentliches Profil exportieren\n" +
-            "5: Öffentliches Profil importieren\n6: Ausweis exportieren\n7: Ausweis importieren\n" +
-            "8: Ausweis kontrollieren über Netzwerkverbindung\n9: Ausweis zeigen über Netzwerkverbindung\n" +
-            "10: Öffentliches Profil anschauen\n11: Privates Profil exportieren\n12: Privates Profil importieren\n" +
-            "13: Exportieren über Netzwerk\n14: Importieren über Netzwerk\n15: Importiertes Profil löschen\n16: Ausweis löschen\n";
+    public static final String[]userCommands = new String[]{
+            "Öffentliches Profil erstellen",
+            "Ausweis erstellen",
+            "Ausweis prüfen",
+            "Öffentliches Profil exportieren",
+            "Öffentliches Profil importieren",
+            "Ausweis exportieren",
+            "Ausweis importieren",
+            "Ausweis kontrollieren über Netzwerkverbindung",
+            "Ausweis zeigen über Netzwerkverbindung",
+            "Öffentliches Profil anschauen",
+            "Privates Profil exportieren",
+            "Privates Profil importieren",
+            "Exportieren über Netzwerk",
+            "Importieren über Netzwerk",
+            "Importiertes Profil löschen",
+            "Ausweis löschen"
+    };
+    public static void printIntroMessage() {
+        System.out.println("Aktion auswählen:");
+        for (int i = 0; i < userCommands.length; i++) {
+            System.out.println((i + 1) + ": " + userCommands[i]);
+        }
+    }
 
     private final Scanner sc;
     private final Controller controller;
@@ -43,7 +61,7 @@ public class TUI implements Observer<OutputEvent> {
                 System.out.println("Passwort falsch");
                 System.exit(0);
             }
-            System.out.println(introMessage);
+            printIntroMessage();
             return;
         }
 
@@ -361,7 +379,7 @@ public class TUI implements Observer<OutputEvent> {
 
         if(!(e instanceof OutputEvent.ServerStartedEvent)) {
             System.out.println("\n");
-            System.out.println(introMessage);
+            printIntroMessage();
             tui_state = NORMAL_TUI_STATE;
         }
     }
