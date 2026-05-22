@@ -1,6 +1,5 @@
 package model;
 
-import controller.Controller;
 import utils.AES_InputStream;
 import utils.AES_OutputStream;
 import utils.OutputEvent;
@@ -65,18 +64,21 @@ public class PrivateProfile extends PublicProfile {
         return new PrivateProfile(p.name, p.sequence_number, p.created, p.validityPeriod, p.dynamicAttributes, p.publicKey, private_key_b);
     }
 
-    public void saveExternal(File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        FileOutputStream fos = new FileOutputStream(destination);
-        fos.write(PROGRAM_WATERMARK);
-        fos.write(Utils.int_to_bytes(FILE_TYPE_PRIVATE_PROFILE));
+    @Override
+    public void saveExternal(OutputStream os, String password, int type) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        os.write(PROGRAM_WATERMARK);
+        os.write(type);
         byte[]password_hash = Utils.passwordHash(password);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(os, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         aesos.write(password_hash);
         sliceWriter.write(toByteArray(true));
         sliceWriter.write(publicKey);
         sliceWriter.write(privateKey);
         aesos.close();
+    }
+    public static boolean isIDaggregated(String profileName, int sequenceNumber) throws Exception {
+        return isIDaggregated(profileName, sequenceNumber, LOAD_FROM_CREATED, strCreatedPersonalIDs);
     }
 
     public PublicProfile toPublic() {

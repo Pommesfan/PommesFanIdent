@@ -1,6 +1,5 @@
 package model;
 
-import controller.Controller;
 import utils.AES_InputStream;
 import utils.AES_OutputStream;
 import utils.OutputEvent;
@@ -74,24 +73,27 @@ public class PublicProfile {
         return fromSliceReader(sliceReader);
     }
 
-    public static boolean isIDaggregated(String name, int sequenceNumber) throws Exception {
-        File folder = new File(controller.appDataLocation + strImportedPersonalIDs);
+    protected static boolean isIDaggregated(String profileName, int sequenceNumber, int mode, String url) throws Exception {
+        File folder = new File(controller.appDataLocation + url);
         for(String idNumber: Objects.requireNonNull(folder.list())) {
-            Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_IMPORTED, idNumber, false);
+            Personal_ID personalId = Personal_ID.loadInternal(mode, idNumber, false);
             assert personalId != null;
             PublicProfile profile = personalId.publicProfile;
-            if(profile.name.equals(name) && profile.sequence_number == sequenceNumber)
+            if(profile.name.equals(profileName) && profile.sequence_number == sequenceNumber)
                 return true;
         }
         return false;
     }
 
-    public void saveExternal(File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
-        FileOutputStream fos = new FileOutputStream(destination);
-        fos.write(PROGRAM_WATERMARK);
-        fos.write(FILE_TYPE_PUBLIC_PROFILE);
+    public static boolean isIDaggregated(String profileName, int sequenceNumber) throws Exception {
+        return isIDaggregated(profileName, sequenceNumber, LOAD_FROM_IMPORTED, strImportedPersonalIDs);
+    }
+
+    public void saveExternal(OutputStream os, String password, int type) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+        os.write(PROGRAM_WATERMARK);
+        os.write(type);
         byte[]password_hash = Utils.passwordHash(password);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(os, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         aesos.write(password_hash);
         toSliceWriter(sliceWriter);

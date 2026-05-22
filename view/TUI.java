@@ -7,6 +7,7 @@ import utils.OutputEvent;
 import javax.crypto.NoSuchPaddingException;
 import javax.swing.*;
 import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.security.InvalidKeyException;
@@ -32,7 +33,7 @@ public class TUI implements Observer<OutputEvent> {
             "Privates Profil importieren",
             "Exportieren über Netzwerk",
             "Importieren über Netzwerk",
-            "Importiertes Profil löschen",
+            "Profil löschen",
             "Ausweis löschen"
     };
     public static void printIntroMessage() {
@@ -83,7 +84,7 @@ public class TUI implements Observer<OutputEvent> {
                 case 12: doImportPrivateProfile(); break;
                 case 13: doExportOverNetwork(); break;
                 case 14: doImportOverNetwork(); break;
-                case 15: doDeletePublicProfile(); break;
+                case 15: doDeleteProfile(); break;
                 case 16: doDeleteID(); break;
             }
         } else if (tui_state == WAIT_FOR_ID_STATE) {
@@ -151,8 +152,10 @@ public class TUI implements Observer<OutputEvent> {
         if(handSignature == null) {
             return;
         }
-
-        controller.generateID(publicProfile, sequence_number, valid_until, name, surname, birthdate, address, dynamicAttributeValues, personalPicture, handSignature);
+        byte[] personal_picture_b = Files.readAllBytes(personalPicture.toPath());
+        byte[] hand_signature_b = Files.readAllBytes(handSignature.toPath());
+        controller.generateID(publicProfile, sequence_number, valid_until, name, surname, birthdate, address,
+                dynamicAttributeValues, personal_picture_b, personalPicture.getName(), hand_signature_b, handSignature.getName());
     }
 
     private void doCheckPersonalID() throws Exception {
@@ -201,7 +204,7 @@ public class TUI implements Observer<OutputEvent> {
         }
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
-        controller.exportPublicProfile(profileName, sequence_number, destination, password);
+        controller.exportPublicProfile(profileName, sequence_number, new FileOutputStream(destination), password);
     }
 
     private void doExportPersonalID() throws Exception {
@@ -217,7 +220,7 @@ public class TUI implements Observer<OutputEvent> {
         }
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
-        controller.exportPersonalID(id_number, destination, password);
+        controller.exportPersonalID(id_number, new FileOutputStream(destination), password);
     }
 
     private void doCheckPersonalIDFromRemote() throws Exception {
@@ -261,7 +264,7 @@ public class TUI implements Observer<OutputEvent> {
         }
         System.out.println("Krypto-Passwort:");
         String password = sc.next().toUpperCase();
-        controller.exportPrivateProfile(profileName, sequence_number, destination, password);
+        controller.exportPrivateProfile(profileName, sequence_number, new FileOutputStream(destination), password);
     }
 
     private void doImportPrivateProfile() throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
@@ -295,18 +298,22 @@ public class TUI implements Observer<OutputEvent> {
         System.out.println("1 eingeben zum Vorgang abbrechen");
     }
 
-    private void doDeletePublicProfile() throws Exception {
+    private void doDeleteProfile() throws Exception {
+        System.out.println("Aus Erstellten : 1; aus Importierten 2:");
+        int mode = sc.nextInt();
         System.out.println("Öffentliches Profil auswählen");
         String profileName = sc.next();
         System.out.println("Folgenummer Profil:");
         int sequence_number = sc.nextInt();
-        controller.deletePublicProfile(profileName, sequence_number);
+        controller.deleteProfile(profileName, sequence_number, mode);
     }
 
     private void doDeleteID() throws Exception {
+        System.out.println("Aus Erstellten : 1; aus Importierten 2:");
+        int mode = sc.nextInt();
         System.out.println("Ausweisnummer angeben:");
         String id_number = sc.next().toUpperCase();
-        controller.deleteID(id_number);
+        controller.deleteID(id_number, mode);
     }
 
     @Override

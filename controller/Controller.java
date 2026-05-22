@@ -96,7 +96,9 @@ public class Controller extends Observable<OutputEvent> {
         return signature.sign();
     }
 
-    public void generateID(String publicProfileName, int sequence_number, String validUntil, String name, String surname, String birthdate, String address, String[] dynamicAttributeValues, File personalPicture, File handSignature) throws Exception {
+    public void generateID(String publicProfileName, int sequence_number, String validUntil, String name, String surname,
+                           String birthdate, String address, String[] dynamicAttributeValues, byte[]personalImage,
+                           String personalImageName, byte[] handSignature, String handSignatureName) throws Exception {
         if(!Utils.validateStringDate(validUntil)) {
             notifyObservers(new OutputEvent.InvalidDateEvent());
             return;
@@ -123,12 +125,10 @@ public class Controller extends Observable<OutputEvent> {
         }
 
         String ID_number = Utils.getAlphanumeric(8);
-        byte[] personalImage_b = Files.readAllBytes(personalPicture.toPath());
-        byte[] handSignature_b = Files.readAllBytes(handSignature.toPath());
 
         Personal_ID personalId = new Personal_ID(ID_number, privateProfile, today, validUntil, name, surname, birthdate,
-                address, dynamicAttributeValues, personalPicture.getName(), handSignature.getName());
-        personalId.blob = Optional.of(new Personal_ID.BLOB(personalImage_b, handSignature_b));
+                address, dynamicAttributeValues, personalImageName, handSignatureName);
+        personalId.blob = Optional.of(new Personal_ID.BLOB(personalImage, handSignature));
         //Create signature
         byte[] signature_b = sign_id(personalId, privateProfile);
         personalId.signature = Optional.of(signature_b);
@@ -169,14 +169,14 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void exportPublicProfile(String profileName, int sequence_number, File destination, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
+    public void exportPublicProfile(String profileName, int sequence_number, OutputStream os, String password) throws IOException, NoSuchPaddingException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 appDataLocation + strPrivateProfiles, profileName, sequence_number);
         if(privateProfile == null)
             return;
 
         PublicProfile publicProfile = privateProfile.toPublic();
-        publicProfile.saveExternal(destination, password);
+        publicProfile.saveExternal(os, password, FILE_TYPE_PUBLIC_PROFILE);
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
@@ -196,12 +196,12 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void exportPrivateProfile(String profileName, int sequenceNumber, File destination, String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
+    public void exportPrivateProfile(String profileName, int sequenceNumber, OutputStream os, String password) throws NoSuchPaddingException, IOException, NoSuchAlgorithmException, InvalidKeyException {
         PrivateProfile privateProfile = PrivateProfile.fromInternalFile(
                 appDataLocation + strPrivateProfiles, profileName, sequenceNumber);
         if(privateProfile == null)
             return;
-        privateProfile.saveExternal(destination, password);
+        privateProfile.saveExternal(os, password, FILE_TYPE_PRIVATE_PROFILE);
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
@@ -222,17 +222,16 @@ public class Controller extends Observable<OutputEvent> {
         }
     }
 
-    public void exportPersonalID(String personalID_s, File destination, String password) throws Exception {
+    public void exportPersonalID(String personalID_s, OutputStream os, String password) throws Exception {
         Personal_ID personalId = Personal_ID.loadInternal(LOAD_FROM_CREATED, personalID_s.toUpperCase(), true);
         if (personalId == null) {
             return;
         }
 
-        FileOutputStream fos = new FileOutputStream(destination);
-        fos.write(PROGRAM_WATERMARK);
-        fos.write(FILE_TYPE_ID);
+        os.write(PROGRAM_WATERMARK);
+        os.write(FILE_TYPE_ID);
         byte[]password_hash = Utils.passwordHash(password);
-        AES_OutputStream aesos = AES_OutputStream.from_ecb(fos, AES_BUFFER_SIZE, password_hash);
+        AES_OutputStream aesos = AES_OutputStream.from_ecb(os, AES_BUFFER_SIZE, password_hash);
         Utils.SliceWriter sliceWriter = new Utils.SliceWriter(aesos);
         aesos.write(password_hash);
         personalId.toSliceWriter(sliceWriter, true);
@@ -275,23 +274,42 @@ public class Controller extends Observable<OutputEvent> {
         checkIDrunnerRes = null;
         return res;
     }
-
-    public void deletePublicProfile(String name, int sequenceNumber) throws Exception {
-        if(PublicProfile.isIDaggregated(name, sequenceNumber))
+    public void deleteProfile(String name, int sequenceNumber, int mode) throws Exception {
+        boolean isAggregated;
+        String url;
+        if(mode == LOAD_FROM_CREATED) {
+            isAggregated = PrivateProfile.isIDaggregated(name, sequenceNumber);
+            url = strPrivateProfiles;
+        } else if (mode == LOAD_FROM_IMPORTED) {
+            isAggregated = PublicProfile.isIDaggregated(name, sequenceNumber);
+            url = strPublicProfiles;
+        } else
+            throw new IllegalArgumentException("unvalid mode: " + mode);
+        if(isAggregated)
             notifyObservers(new OutputEvent.IDaggregatedEvent());
         else {
-            Files.delete(Paths.get(appDataLocation + strPublicProfiles + name + "/" + sequenceNumber));
+            Files.delete(Paths.get(appDataLocation + url + name + "/" + sequenceNumber));
             notifyObservers(new OutputEvent.DummyEvent());
         }
     }
 
-    public void deleteID(String idNumber) throws Exception {
-        Personal_ID id = Personal_ID.loadInternal(LOAD_FROM_IMPORTED, idNumber, true);
+    public void deleteID(String idNumber, int mode) throws Exception {
+        String urlToDelete;
+        String urlOpposite;
+        if(mode == LOAD_FROM_CREATED) {
+            urlToDelete = strCreatedPersonalIDs;
+            urlOpposite = strImportedPersonalIDs;
+        } else if (mode == LOAD_FROM_IMPORTED) {
+            urlToDelete = strImportedPersonalIDs;
+            urlOpposite = strCreatedPersonalIDs;
+        } else
+            throw new IllegalArgumentException("unvalid mode: " + mode);
+        Personal_ID id = Personal_ID.loadInternal(mode, idNumber, true);
         if(id == null)
             return;
 
         // if id is present in created, don't delete relation
-        if(!Files.exists(Paths.get(appDataLocation + strCreatedPersonalIDs + idNumber))) {
+        if(!Files.exists(Paths.get(appDataLocation + urlOpposite + idNumber))) {
             AttachmentRelation relationPersonalImage = AttachmentRelation.getRelation(ATTACHMENT_PERSONAL_IMAGE);
             String personalImageFile = relationPersonalImage.removeID(id.ID_number);
             if(!relationPersonalImage.hasImage(personalImageFile)) {
@@ -307,7 +325,7 @@ public class Controller extends Observable<OutputEvent> {
             relationHandSignature.save();
         }
 
-        Files.delete(Paths.get(appDataLocation + strImportedPersonalIDs + idNumber));
+        Files.delete(Paths.get(appDataLocation + urlToDelete + idNumber));
         notifyObservers(new OutputEvent.DummyEvent());
     }
 
