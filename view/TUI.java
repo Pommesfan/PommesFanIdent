@@ -323,7 +323,7 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println(((OutputEvent.PersonalIDValidEvent) e).personalIDprintout);
         } else if(e instanceof OutputEvent.PersonalIDInvalidEvent){
             System.out.println("Ausweis ist nicht korrekt\n");
-        } else if (e instanceof OutputEvent.ServerStartedEvent serverStartedEvent) {
+        } else if (e instanceof OutputEvent.NetworkServerStartedEvent serverStartedEvent) {
             System.out.println("IP-Adresse:");
             System.out.println(serverStartedEvent.ip);
             System.out.println("Portnummer:");
@@ -384,7 +384,7 @@ public class TUI implements Observer<OutputEvent> {
             System.out.println("Anderes Profil mit dem selben Namen und Folgenummer gespeichert");
         }
 
-        if(!(e instanceof OutputEvent.ServerStartedEvent)) {
+        if(!(e instanceof OutputEvent.NetworkServerStartedEvent)) {
             System.out.println("\n");
             printIntroMessage();
             tui_state = NORMAL_TUI_STATE;
